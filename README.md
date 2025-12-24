@@ -11,6 +11,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1Qb2G-s48bsY-z0jpVtwDMi
 ## Características PWA
 
 - **Instalable**: Descarga la app en tu dispositivo como una aplicación nativa
+- **Prompt automático**: Al abrir la app, aparece un banner invitándote a instalarla
 - **Funciona offline**: Juega sin conexión a internet gracias al service worker
 - **Icono personalizado**: Incluye un icono de impostor cordobés con sombrero
 - **Actualizaciones automáticas**: La app se actualiza automáticamente cuando hay nuevas versiones

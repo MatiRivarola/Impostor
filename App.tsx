@@ -6,6 +6,7 @@ import { DebatePhase } from './components/DebatePhase';
 import { VotingPhase } from './components/VotingPhase';
 import { ResultPhase } from './components/ResultPhase';
 import { LastBulletPhase } from './components/LastBulletPhase';
+import { InstallPWA } from './components/InstallPWA';
 import { getGameWords } from './services/wordService';
 import { THEMES } from './constants';
 import { Button } from './components/Button';
@@ -261,59 +262,64 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-hidden">
-      <div className="max-w-md mx-auto min-h-screen flex flex-col relative">
-        
-        {gameState.phase === 'SETUP' && (
-          <div className="p-4 flex-1 flex flex-col justify-center">
-            <SetupPhase 
-                onStartGame={startGame} 
-                scores={scores}
-                onResetScores={resetScores}
+    <>
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-hidden">
+        <div className="max-w-md mx-auto min-h-screen flex flex-col relative">
+
+          {gameState.phase === 'SETUP' && (
+            <div className="p-4 flex-1 flex flex-col justify-center">
+              <SetupPhase
+                  onStartGame={startGame}
+                  scores={scores}
+                  onResetScores={resetScores}
+              />
+            </div>
+          )}
+
+          {(gameState.phase === 'ASSIGNMENT_WAIT' || gameState.phase === 'ASSIGNMENT_REVEAL') && (
+            <AssignmentPhase
+              key={gameState.players[gameState.currentPlayerIndex].id}
+              player={gameState.players[gameState.currentPlayerIndex]}
+              onNext={handleNextPlayer}
             />
-          </div>
-        )}
+          )}
 
-        {(gameState.phase === 'ASSIGNMENT_WAIT' || gameState.phase === 'ASSIGNMENT_REVEAL') && (
-          <AssignmentPhase 
-            key={gameState.players[gameState.currentPlayerIndex].id} 
-            player={gameState.players[gameState.currentPlayerIndex]}
-            onNext={handleNextPlayer}
-          />
-        )}
-
-        {gameState.phase === 'DEBATE' && (
-          <DebatePhase 
-            timerDuration={timerDuration}
-            onTimerEnd={() => setGameState(prev => ({ ...prev, phase: 'VOTING' }))}
-          />
-        )}
-
-        {gameState.phase === 'VOTING' && (
-          <VotingPhase 
-            players={gameState.players}
-            onVote={handleVote}
-          />
-        )}
-
-        {gameState.phase === 'LAST_BULLET' && (
-            <LastBulletPhase 
-                impostorName={gameState.players.find(p => p.role === 'impostor')?.name || 'El Impostor'}
-                onGuess={handleLastBulletGuess}
+          {gameState.phase === 'DEBATE' && (
+            <DebatePhase
+              timerDuration={timerDuration}
+              onTimerEnd={() => setGameState(prev => ({ ...prev, phase: 'VOTING' }))}
             />
-        )}
+          )}
 
-        {gameState.phase === 'GAME_OVER' && (
-          <ResultPhase 
-            winner={gameState.winner!}
-            players={gameState.players}
-            secretWord={gameState.secretWord}
-            scores={scores}
-            onPlayAgain={handleReplay}
-            onChangeSetup={() => setGameState(prev => ({ ...prev, phase: 'SETUP' }))}
-          />
-        )}
+          {gameState.phase === 'VOTING' && (
+            <VotingPhase
+              players={gameState.players}
+              onVote={handleVote}
+            />
+          )}
+
+          {gameState.phase === 'LAST_BULLET' && (
+              <LastBulletPhase
+                  impostorName={gameState.players.find(p => p.role === 'impostor')?.name || 'El Impostor'}
+                  onGuess={handleLastBulletGuess}
+              />
+          )}
+
+          {gameState.phase === 'GAME_OVER' && (
+            <ResultPhase
+              winner={gameState.winner!}
+              players={gameState.players}
+              secretWord={gameState.secretWord}
+              scores={scores}
+              onPlayAgain={handleReplay}
+              onChangeSetup={() => setGameState(prev => ({ ...prev, phase: 'SETUP' }))}
+            />
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* PWA Install Prompt */}
+      <InstallPWA />
+    </>
   );
 }
