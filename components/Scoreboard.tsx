@@ -10,7 +10,7 @@ interface ScoreboardProps {
 }
 
 export const Scoreboard: React.FC<ScoreboardProps> = ({ scores, onReset, onClose }) => {
-  const sortedScores = Object.entries(scores).sort(([, a], [, b]) => b - a);
+  const sortedScores = Object.entries(scores).sort(([, a], [, b]) => (b as number) - (a as number));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md animate-fade-in">

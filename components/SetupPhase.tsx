@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, X, Users, Ghost, Play, Check, Trophy, VenetianMask, Skull, Shield, Info } from 'lucide-react';
+import { Plus, X, Users, Ghost, Play, Check, VenetianMask, Skull, Shield, Minus, Info } from 'lucide-react';
 import { Button } from './Button';
-import { Scoreboard } from './Scoreboard';
 import { THEMES, MIN_PLAYERS } from '../constants';
 import { ThemeOption, ScoreMap, GameMode } from '../types';
 
@@ -15,8 +14,8 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
   const [names, setNames] = useState<string[]>([]);
   const [currentName, setCurrentName] = useState('');
   const [impostorCount, setImpostorCount] = useState(1);
+  const [undercoverCount, setUndercoverCount] = useState(0);
   const [selectedThemes, setSelectedThemes] = useState<string[]>([THEMES[0].id]);
-  const [showScoreboard, setShowScoreboard] = useState(false);
   const [gameMode, setGameMode] = useState<GameMode>('chaos');
 
   // Pre-fill names from history if empty
@@ -28,6 +27,15 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
         }
     }
   }, [scores]);
+
+  // Adjust counts when mode changes
+  React.useEffect(() => {
+      if (gameMode === 'classic') {
+          setUndercoverCount(0);
+      } else if ((gameMode === 'chaos' || gameMode === 'hardcore') && undercoverCount === 0 && names.length >= 4) {
+          setUndercoverCount(1);
+      }
+  }, [gameMode, names.length]);
 
   const addPlayer = () => {
     if (currentName.trim() && !names.includes(currentName.trim())) {
@@ -58,38 +66,20 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
 
   const handleStart = () => {
     if (names.length < MIN_PLAYERS) return;
-    
-    // Auto-configure counts based on mode
-    let finalUndercoverCount = 0;
-    if (gameMode === 'chaos' || gameMode === 'hardcore') {
-        finalUndercoverCount = names.length >= 4 ? 1 : 0;
-    }
-
-    onStartGame(names, impostorCount, finalUndercoverCount, selectedThemes, gameMode);
+    onStartGame(names, impostorCount, undercoverCount, selectedThemes, gameMode);
   };
 
-  const isValid = names.length >= MIN_PLAYERS;
-  
+  // Validation
+  const totalRoles = impostorCount + undercoverCount;
+  const isValid = names.length >= MIN_PLAYERS && (names.length - totalRoles) >= 1;
+
+  const showUndercoverSelector = gameMode === 'chaos' || gameMode === 'hardcore';
+
   return (
     <div className="flex flex-col gap-4 w-full animate-fade-in pb-32 px-2 relative">
-      {showScoreboard && (
-        <Scoreboard 
-            scores={scores} 
-            onReset={() => { onResetScores(); setNames([]); }} 
-            onClose={() => setShowScoreboard(false)} 
-        />
-      )}
-
+      
       {/* Header Estilo Original con Gradiente */}
       <div className="text-center py-6 relative">
-        <button 
-            onClick={() => setShowScoreboard(true)}
-            className="absolute top-0 right-0 bg-slate-800/80 p-2.5 rounded-xl text-yellow-400 border border-yellow-500/30 shadow-lg hover:scale-105 transition-all flex items-center gap-2"
-        >
-            <Trophy size={20} />
-            <span className="text-xs font-bold hidden sm:inline">RANKING</span>
-        </button>
-        
         <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 tracking-tighter italic transform -rotate-2 drop-shadow-2xl">
           IMPOSTOR
         </h1>
@@ -98,13 +88,18 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
         {/* Resumen de Configuración (Badges) */}
         <div className="flex flex-wrap justify-center gap-2 mt-4">
             <div className="bg-slate-800/60 backdrop-blur px-3 py-1 rounded-full border border-slate-700 text-xs font-medium text-slate-300 flex items-center gap-1">
-                <Users size={12} /> {names.length} Jugadores
+                <Users size={12} /> {names.length}
             </div>
             <div className="bg-slate-800/60 backdrop-blur px-3 py-1 rounded-full border border-slate-700 text-xs font-medium text-red-300 flex items-center gap-1">
-                <Ghost size={12} /> {names.length > 0 ? impostorCount : '-'} Impostor
+                <Ghost size={12} /> {impostorCount}
             </div>
+             {undercoverCount > 0 && (
+                <div className="bg-slate-800/60 backdrop-blur px-3 py-1 rounded-full border border-slate-700 text-xs font-medium text-yellow-300 flex items-center gap-1">
+                    <VenetianMask size={12} /> {undercoverCount}
+                </div>
+            )}
             <div className="bg-slate-800/60 backdrop-blur px-3 py-1 rounded-full border border-slate-700 text-xs font-medium text-blue-300 flex items-center gap-1">
-                {selectedThemes.length > 1 ? '🎨 Mix Temático' : (THEMES.find(t => t.id === selectedThemes[0])?.label || 'Sin Tema')}
+                {selectedThemes.length > 1 ? '🎨 Mix' : (THEMES.find(t => t.id === selectedThemes[0])?.label || 'Sin Tema')}
             </div>
         </div>
       </div>
@@ -148,53 +143,117 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
       </div>
 
       {/* Game Modes */}
-      <div className="space-y-2">
+      <div className="space-y-3">
          <h2 className="font-bold text-sm text-purple-400 uppercase tracking-wide px-1">Modo de Juego</h2>
-         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+         <div className="flex flex-col gap-3">
             
             {/* Classic Mode */}
             <button 
                 onClick={() => setGameMode('classic')}
-                className={`p-3 rounded-xl border-2 text-left transition-all relative overflow-hidden group ${gameMode === 'classic' ? 'bg-blue-900/20 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)]' : 'bg-slate-800/40 border-slate-700 opacity-60'}`}
+                className={`p-4 rounded-xl border-2 text-left transition-all relative overflow-hidden group ${gameMode === 'classic' ? 'bg-blue-900/20 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)]' : 'bg-slate-800/40 border-slate-700 opacity-60'}`}
             >
-                <div className="flex justify-between items-center mb-1 relative z-10">
-                    <span className="font-black text-white flex items-center gap-2"><Shield size={16} className="text-blue-400"/> CLÁSICO</span>
-                    {gameMode === 'classic' && <Check size={16} className="text-blue-500"/>}
+                <div className="flex justify-between items-center mb-2 relative z-10">
+                    <span className="font-black text-white flex items-center gap-2 text-lg"><Shield size={20} className="text-blue-400"/> CLÁSICO</span>
+                    {gameMode === 'classic' && <Check size={20} className="text-blue-500"/>}
                 </div>
-                <p className="text-[10px] text-slate-400 leading-tight">Ciudadanos vs Impostor.</p>
+                <ul className="text-xs text-slate-400 space-y-1 ml-1 list-disc list-inside opacity-90">
+                    <li><strong>Ciudadanos:</strong> Todos tienen la misma palabra.</li>
+                    <li><strong>Impostor:</strong> No tiene palabra. Debe mentir.</li>
+                    <li>Ganás votando al Impostor.</li>
+                </ul>
             </button>
 
             {/* Chaos Mode */}
             <button 
                 onClick={() => setGameMode('chaos')}
-                className={`p-3 rounded-xl border-2 text-left transition-all relative overflow-hidden group ${gameMode === 'chaos' ? 'bg-yellow-900/20 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]' : 'bg-slate-800/40 border-slate-700 opacity-60'}`}
+                className={`p-4 rounded-xl border-2 text-left transition-all relative overflow-hidden group ${gameMode === 'chaos' ? 'bg-yellow-900/20 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]' : 'bg-slate-800/40 border-slate-700 opacity-60'}`}
             >
                 <div className="absolute top-0 right-0 bg-yellow-500 text-slate-900 text-[9px] font-bold px-1.5 py-0.5 rounded-bl-lg z-20">TOP</div>
-                <div className="flex justify-between items-center mb-1 relative z-10">
-                    <span className="font-black text-white flex items-center gap-2"><VenetianMask size={16} className="text-yellow-400"/> CAOS</span>
-                    {gameMode === 'chaos' && <Check size={16} className="text-yellow-500"/>}
+                <div className="flex justify-between items-center mb-2 relative z-10">
+                    <span className="font-black text-white flex items-center gap-2 text-lg"><VenetianMask size={20} className="text-yellow-400"/> CAOS</span>
+                    {gameMode === 'chaos' && <Check size={20} className="text-yellow-500"/>}
                 </div>
-                <p className="text-[10px] text-slate-400 leading-tight">Agrega "Encubierto" (Palabra Trampa).</p>
+                <ul className="text-xs text-slate-400 space-y-1 ml-1 list-disc list-inside opacity-90">
+                    <li>Incluye al <strong>Encubierto</strong> (Confundido).</li>
+                    <li>El Encubierto tiene una palabra <strong>parecida</strong> pero distinta.</li>
+                    <li>El Encubierto gana con los Ciudadanos (si no lo votan).</li>
+                </ul>
             </button>
 
             {/* Hardcore Mode */}
             <button 
                 onClick={() => setGameMode('hardcore')}
-                className={`p-3 rounded-xl border-2 text-left transition-all relative overflow-hidden group ${gameMode === 'hardcore' ? 'bg-red-900/20 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : 'bg-slate-800/40 border-slate-700 opacity-60'}`}
+                className={`p-4 rounded-xl border-2 text-left transition-all relative overflow-hidden group ${gameMode === 'hardcore' ? 'bg-red-900/20 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : 'bg-slate-800/40 border-slate-700 opacity-60'}`}
             >
-                <div className="flex justify-between items-center mb-1 relative z-10">
-                    <span className="font-black text-white flex items-center gap-2"><Skull size={16} className="text-red-400"/> HARDCORE</span>
-                    {gameMode === 'hardcore' && <Check size={16} className="text-red-500"/>}
+                <div className="flex justify-between items-center mb-2 relative z-10">
+                    <span className="font-black text-white flex items-center gap-2 text-lg"><Skull size={20} className="text-red-400"/> HARDCORE</span>
+                    {gameMode === 'hardcore' && <Check size={20} className="text-red-500"/>}
                 </div>
-                <p className="text-[10px] text-slate-400 leading-tight">Impostor puede robar la victoria.</p>
+                <ul className="text-xs text-slate-400 space-y-1 ml-1 list-disc list-inside opacity-90">
+                    <li>Incluye Encubierto + <strong>Mecánica "Última Bala"</strong>.</li>
+                    <li>Si atrapan al Impostor, este tiene <strong>una chance más</strong>.</li>
+                    <li>Si adivina la palabra exacta, <strong>roba la victoria</strong>.</li>
+                </ul>
             </button>
          </div>
       </div>
 
+      {/* Role Configuration (Dynamic) */}
+      <div className="bg-slate-800/40 p-3 rounded-2xl border border-slate-700/50 mt-1">
+        <h2 className="font-bold text-sm text-slate-300 uppercase tracking-wide mb-3">Configuración de Roles</h2>
+        <div className="grid grid-cols-2 gap-4">
+            {/* Impostor Selector */}
+            <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold text-red-400 uppercase">Impostores</span>
+                <div className="flex items-center justify-between bg-slate-900/80 rounded-lg p-1 border border-slate-700">
+                    <button 
+                        onClick={() => setImpostorCount(Math.max(1, impostorCount - 1))} 
+                        className="w-8 h-8 flex items-center justify-center rounded bg-slate-800 text-white hover:bg-slate-700 border border-slate-600"
+                    >
+                        <Minus size={14} />
+                    </button>
+                    <span className="font-bold text-white text-lg">{impostorCount}</span>
+                    <button 
+                        onClick={() => setImpostorCount(Math.min(Math.floor(names.length / 2), impostorCount + 1))} 
+                        className="w-8 h-8 flex items-center justify-center rounded bg-slate-800 text-white hover:bg-slate-700 border border-slate-600"
+                    >
+                        <Plus size={14} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Undercover Selector (Conditional) */}
+            {showUndercoverSelector ? (
+                <div className="flex flex-col gap-1 animate-fade-in">
+                    <span className="text-[10px] font-bold text-yellow-400 uppercase">Encubiertos</span>
+                    <div className="flex items-center justify-between bg-slate-900/80 rounded-lg p-1 border border-slate-700">
+                        <button 
+                            onClick={() => setUndercoverCount(Math.max(0, undercoverCount - 1))} 
+                            className="w-8 h-8 flex items-center justify-center rounded bg-slate-800 text-white hover:bg-slate-700 border border-slate-600"
+                        >
+                            <Minus size={14} />
+                        </button>
+                        <span className="font-bold text-white text-lg">{undercoverCount}</span>
+                        <button 
+                            onClick={() => setUndercoverCount(Math.min(Math.max(0, names.length - impostorCount - 1), undercoverCount + 1))} 
+                            className="w-8 h-8 flex items-center justify-center rounded bg-slate-800 text-white hover:bg-slate-700 border border-slate-600"
+                        >
+                            <Plus size={14} />
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex items-center justify-center opacity-30 text-xs italic text-slate-500 border border-slate-700/50 rounded-lg h-full">
+                    Sin Encubiertos
+                </div>
+            )}
+        </div>
+      </div>
+
       {/* Themes Grid */}
-      <div className="flex flex-col flex-1 min-h-0 mt-1">
+      <div className="flex flex-col flex-1 min-h-0 mt-2">
          <h2 className="font-bold text-sm text-green-400 uppercase tracking-wide mb-2 px-1">Temáticas</h2>
-         <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-40 pr-1 pb-2 scrollbar-thin">
+         <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-64 pr-1 pb-2 scrollbar-thin">
             {THEMES.map(theme => {
                 const isSelected = selectedThemes.includes(theme.id);
                 return (
@@ -232,7 +291,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
         </Button>
         {names.length > 0 && !isValid && (
            <p className="text-red-400 text-xs text-center mt-2 font-semibold bg-slate-900/80 py-1 rounded">
-             ¡Faltan jugadores para armar el quilombo!
+             ¡Configuración de roles inválida!
            </p>
         )}
       </div>

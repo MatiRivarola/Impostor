@@ -6,11 +6,11 @@ import { DebatePhase } from './components/DebatePhase';
 import { VotingPhase } from './components/VotingPhase';
 import { ResultPhase } from './components/ResultPhase';
 import { LastBulletPhase } from './components/LastBulletPhase';
-import { InstallPWA } from './components/InstallPWA';
+import { Scoreboard } from './components/Scoreboard';
 import { getGameWords } from './services/wordService';
 import { THEMES } from './constants';
 import { Button } from './components/Button';
-import { PlayCircle, AlertOctagon } from 'lucide-react';
+import { PlayCircle, AlertOctagon, Settings, ArrowLeft, RefreshCw, Trophy } from 'lucide-react';
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>({
@@ -29,6 +29,8 @@ export default function App() {
   const [selectedThemeIds, setSelectedThemeIds] = useState<string[]>([]);
   const [timerDuration, setTimerDuration] = useState(180);
   const [ejectedInnocent, setEjectedInnocent] = useState<string | null>(null);
+  const [showInGameSettings, setShowInGameSettings] = useState(false);
+  const [showScoreboard, setShowScoreboard] = useState(false);
   
   // Scoring State
   const [scores, setScores] = useState<ScoreMap>(() => {
@@ -216,7 +218,19 @@ export default function App() {
      const currentNames = gameState.players.map(p => p.name);
      startGame(currentNames, gameState.impostorCount, gameState.undercoverCount, selectedThemeIds, gameState.gameMode);
   };
+
+  const handleResetToSetup = () => {
+     setGameState(prev => ({ ...prev, phase: 'SETUP' }));
+     setShowInGameSettings(false);
+  };
+
+  const handleFullReset = () => {
+     // Restart current game with same settings
+     handleReplay();
+     setShowInGameSettings(false);
+  };
   
+  // INNOCENT EJECTED SCREEN
   if (ejectedInnocent) {
     const victim = gameState.players.find(p => p.name === ejectedInnocent);
     const wasUndercover = victim?.role === 'undercover';
@@ -261,65 +275,123 @@ export default function App() {
     );
   }
 
+  // Active game phases check
+  const isGameActive = ['ASSIGNMENT_WAIT', 'ASSIGNMENT_REVEAL', 'DEBATE', 'VOTING', 'LAST_BULLET'].includes(gameState.phase);
+  
+  // Hide scoreboard during sensitive role assignment phases
+  const isAssignmentPhase = ['ASSIGNMENT_WAIT', 'ASSIGNMENT_REVEAL'].includes(gameState.phase);
+
   return (
-    <>
-      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-hidden">
-        <div className="max-w-md mx-auto min-h-screen flex flex-col relative">
-
-          {gameState.phase === 'SETUP' && (
-            <div className="p-4 flex-1 flex flex-col justify-center">
-              <SetupPhase
-                  onStartGame={startGame}
-                  scores={scores}
-                  onResetScores={resetScores}
-              />
-            </div>
-          )}
-
-          {(gameState.phase === 'ASSIGNMENT_WAIT' || gameState.phase === 'ASSIGNMENT_REVEAL') && (
-            <AssignmentPhase
-              key={gameState.players[gameState.currentPlayerIndex].id}
-              player={gameState.players[gameState.currentPlayerIndex]}
-              onNext={handleNextPlayer}
-            />
-          )}
-
-          {gameState.phase === 'DEBATE' && (
-            <DebatePhase
-              timerDuration={timerDuration}
-              onTimerEnd={() => setGameState(prev => ({ ...prev, phase: 'VOTING' }))}
-            />
-          )}
-
-          {gameState.phase === 'VOTING' && (
-            <VotingPhase
-              players={gameState.players}
-              onVote={handleVote}
-            />
-          )}
-
-          {gameState.phase === 'LAST_BULLET' && (
-              <LastBulletPhase
-                  impostorName={gameState.players.find(p => p.role === 'impostor')?.name || 'El Impostor'}
-                  onGuess={handleLastBulletGuess}
-              />
-          )}
-
-          {gameState.phase === 'GAME_OVER' && (
-            <ResultPhase
-              winner={gameState.winner!}
-              players={gameState.players}
-              secretWord={gameState.secretWord}
-              scores={scores}
-              onPlayAgain={handleReplay}
-              onChangeSetup={() => setGameState(prev => ({ ...prev, phase: 'SETUP' }))}
-            />
-          )}
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-hidden relative">
+      
+      {/* GLOBAL FLOATING SCOREBOARD BUTTON (Top Right) */}
+      {/* Hidden during assignment to prevent distraction/accidental clicks during phone pass */}
+      {!isAssignmentPhase && (
+        <div className="fixed top-4 right-4 z-50">
+            <button 
+                onClick={() => setShowScoreboard(true)}
+                className="bg-slate-800/80 p-3 rounded-full text-yellow-400 hover:text-yellow-300 border border-yellow-500/50 hover:bg-slate-700 transition-all shadow-lg backdrop-blur-sm animate-fade-in"
+            >
+                <Trophy size={20} />
+            </button>
         </div>
-      </div>
+      )}
 
-      {/* PWA Install Prompt */}
-      <InstallPWA />
-    </>
+      {/* SCOREBOARD MODAL */}
+      {showScoreboard && (
+        <Scoreboard 
+            scores={scores} 
+            onReset={() => { resetScores(); if(gameState.phase === 'SETUP') setGameState(prev => ({...prev})); }} 
+            onClose={() => setShowScoreboard(false)} 
+        />
+      )}
+
+      {/* IN-GAME SETTINGS BUTTON (Top Left - Always active when game is running) */}
+      {isGameActive && (
+        <div className="fixed top-4 left-4 z-50">
+            <button 
+                onClick={() => setShowInGameSettings(!showInGameSettings)}
+                className="bg-slate-800/80 p-3 rounded-full text-slate-300 hover:text-white border border-slate-600 hover:bg-slate-700 transition-all shadow-lg backdrop-blur-sm"
+            >
+                <Settings size={20} />
+            </button>
+            
+            {showInGameSettings && (
+                <div className="absolute top-14 left-0 w-64 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col gap-2 animate-fade-in z-50">
+                    <button 
+                        onClick={handleResetToSetup}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 text-left text-sm font-bold text-slate-300 hover:text-white transition-colors"
+                    >
+                        <ArrowLeft size={16} /> Volver a Configurar
+                    </button>
+                    <button 
+                        onClick={handleFullReset}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 text-left text-sm font-bold text-slate-300 hover:text-white transition-colors"
+                    >
+                        <RefreshCw size={16} /> Reiniciar Partida
+                    </button>
+                </div>
+            )}
+            
+            {/* Backdrop to close settings */}
+            {showInGameSettings && (
+                <div className="fixed inset-0 z-40" onClick={() => setShowInGameSettings(false)}></div>
+            )}
+        </div>
+      )}
+
+      <div className="max-w-md mx-auto min-h-screen flex flex-col relative">
+        
+        {gameState.phase === 'SETUP' && (
+          <div className="p-4 flex-1 flex flex-col justify-center">
+            <SetupPhase 
+                onStartGame={startGame} 
+                scores={scores}
+                onResetScores={resetScores}
+            />
+          </div>
+        )}
+
+        {(gameState.phase === 'ASSIGNMENT_WAIT' || gameState.phase === 'ASSIGNMENT_REVEAL') && (
+          <AssignmentPhase 
+            key={gameState.players[gameState.currentPlayerIndex].id} 
+            player={gameState.players[gameState.currentPlayerIndex]}
+            onNext={handleNextPlayer}
+          />
+        )}
+
+        {gameState.phase === 'DEBATE' && (
+          <DebatePhase 
+            timerDuration={timerDuration}
+            onTimerEnd={() => setGameState(prev => ({ ...prev, phase: 'VOTING' }))}
+          />
+        )}
+
+        {gameState.phase === 'VOTING' && (
+          <VotingPhase 
+            players={gameState.players}
+            onVote={handleVote}
+          />
+        )}
+
+        {gameState.phase === 'LAST_BULLET' && (
+            <LastBulletPhase 
+                impostorName={gameState.players.find(p => p.role === 'impostor')?.name || 'El Impostor'}
+                onGuess={handleLastBulletGuess}
+            />
+        )}
+
+        {gameState.phase === 'GAME_OVER' && (
+          <ResultPhase 
+            winner={gameState.winner!}
+            players={gameState.players}
+            secretWord={gameState.secretWord}
+            scores={scores}
+            onPlayAgain={handleReplay}
+            onChangeSetup={() => setGameState(prev => ({ ...prev, phase: 'SETUP' }))}
+          />
+        )}
+      </div>
+    </div>
   );
 }
