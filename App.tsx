@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GameState, Player, ScoreMap, GameMode } from './types';
+import { GameState, Player, ScoreMap, GameMode, AppMode } from './types';
 import { SetupPhase } from './components/SetupPhase';
 import { AssignmentPhase } from './components/AssignmentPhase';
 import { DebatePhase } from './components/DebatePhase';
@@ -7,13 +7,22 @@ import { VotingPhase } from './components/VotingPhase';
 import { ResultPhase } from './components/ResultPhase';
 import { LastBulletPhase } from './components/LastBulletPhase';
 import { Scoreboard } from './components/Scoreboard';
+import { LandingPhase } from './components/LandingPhase';
+import { OnlineLobby } from './components/OnlineLobby';
 import { getGameWords } from './services/wordService';
 import { THEMES } from './constants';
 import { Button } from './components/Button';
-import { PlayCircle, AlertOctagon, Settings, ArrowLeft, RefreshCw, Trophy } from 'lucide-react';
+import { PlayCircle, AlertOctagon, Settings, ArrowLeft, RefreshCw, Trophy, Skull, CheckCircle, Home } from 'lucide-react';
+
+interface RoundFeedback {
+    type: 'success' | 'danger' | 'info';
+    title: string;
+    subtitle: string;
+    description: string;
+}
 
 export default function App() {
-  const [gameState, setGameState] = useState<GameState>({
+  const initialGameState: GameState = {
     phase: 'SETUP',
     players: [],
     impostorCount: 1,
@@ -24,14 +33,35 @@ export default function App() {
     undercoverWord: '',
     currentPlayerIndex: 0,
     winner: null,
+  };
+
+  // State Persistence Initialization
+  const [gameState, setGameState] = useState<GameState>(() => {
+    try {
+        const saved = localStorage.getItem('impostor_game_state');
+        return saved ? JSON.parse(saved) : initialGameState;
+    } catch {
+        return initialGameState;
+    }
   });
+
+  // App Mode State (Landing, Local, Online)
+  const [appMode, setAppMode] = useState<AppMode>('LANDING');
 
   const [selectedThemeIds, setSelectedThemeIds] = useState<string[]>([]);
   const [timerDuration, setTimerDuration] = useState(180);
-  const [ejectedInnocent, setEjectedInnocent] = useState<string | null>(null);
+  
+  // Feedback State Object
+  const [feedback, setFeedback] = useState<RoundFeedback | null>(null);
+
   const [showInGameSettings, setShowInGameSettings] = useState(false);
   const [showScoreboard, setShowScoreboard] = useState(false);
   
+  // Persist Game State
+  useEffect(() => {
+    localStorage.setItem('impostor_game_state', JSON.stringify(gameState));
+  }, [gameState]);
+
   // Scoring State
   const [scores, setScores] = useState<ScoreMap>(() => {
     try {
@@ -48,7 +78,6 @@ export default function App() {
     setScores(prevScores => {
         const newScores = { ...prevScores };
         players.forEach(p => {
-            // Init score if not exists
             if (newScores[p.name] === undefined) newScores[p.name] = 0;
 
             if (winner === 'citizens') {
@@ -57,7 +86,7 @@ export default function App() {
                 }
             } else {
                 if (p.role === 'impostor') {
-                    newScores[p.name] += 200; // Harder to win as impostor
+                    newScores[p.name] += 200;
                 }
             }
         });
@@ -138,52 +167,46 @@ export default function App() {
     const updatedPlayers = gameState.players.map(p => 
       p.id === victimId ? { ...p, isDead: true } : p
     );
-
     const victim = gameState.players.find(p => p.id === victimId);
     
-    // Logic for voting out
     if (victim?.role === 'impostor') {
-        const remainingImpostors = updatedPlayers.filter(p => !p.isDead && p.role === 'impostor').length;
-        
-        if (remainingImpostors === 0) {
-            // ALL impostors caught
-            if (gameState.gameMode === 'hardcore') {
-                // In Hardcore, catching the impostor triggers "Last Bullet"
-                setGameState(prev => ({
-                    ...prev,
-                    players: updatedPlayers,
-                    phase: 'LAST_BULLET'
-                }));
-                return;
-            } else {
-                // Classic/Chaos: Citizens win immediately
-                finishGame('citizens', updatedPlayers);
-                return;
-            }
+        if (gameState.gameMode === 'hardcore') {
+            setGameState(prev => ({
+                ...prev,
+                players: updatedPlayers,
+                phase: 'LAST_BULLET'
+            }));
+            return;
         }
-    } else {
-        // Victim was innocent
+
+        const remainingImpostors = updatedPlayers.filter(p => !p.isDead && p.role === 'impostor').length;
+        if (remainingImpostors === 0) {
+            finishGame('citizens', updatedPlayers);
+        } else {
+            setGameState(prev => ({ ...prev, players: updatedPlayers }));
+            setFeedback({
+                type: 'success',
+                title: '¡IMPOSTOR ATRAPADO!',
+                subtitle: `Era ${victim.name}`,
+                description: `¡Bien jugado! Pero ojo... todavía quedan ${remainingImpostors} impostor(es) sueltos.`
+            });
+        }
+    } 
+    else {
         const livingPlayers = updatedPlayers.filter(p => !p.isDead).length;
         const livingImpostors = updatedPlayers.filter(p => !p.isDead && p.role === 'impostor').length;
         
         if (livingPlayers <= 2 || livingImpostors >= livingPlayers) {
-            // Impostors win by numbers
             finishGame('impostor', updatedPlayers);
-            return;
+        } else {
+            setGameState(prev => ({ ...prev, players: updatedPlayers }));
+            setFeedback({
+                type: 'danger',
+                title: '¡QUÉ PIFIADA!',
+                subtitle: `${victim?.name} era ${victim?.role === 'undercover' ? 'ENCUBIERTO' : 'CIUDADANO'}`,
+                description: 'Le erraron feo. El Impostor se les está cagando de risa.'
+            });
         }
-    }
-
-    // Game continues (Innocent ejected, but game not over)
-    if (victim?.role !== 'impostor') {
-        setGameState(prev => ({
-            ...prev,
-            players: updatedPlayers
-        }));
-        setEjectedInnocent(victim?.name || 'Jugador');
-    } else {
-        // Impostor ejected but there are more? (Not implemented fully for multiple impostors in UI, but logic supports it)
-        // For 1 impostor games, this block is unreachable if remainingImpostors check passes above.
-        setGameState(prev => ({ ...prev, players: updatedPlayers }));
     }
   };
 
@@ -195,22 +218,33 @@ export default function App() {
         winner: winner,
         phase: 'GAME_OVER'
     }));
+    localStorage.removeItem('impostor_game_state');
   };
 
-  // Hardcore Mode: Impostor Guesses Word
   const handleLastBulletGuess = (guess: string) => {
-    // Normalize comparison (remove accents, lowercase)
     const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     
     if (normalize(guess) === normalize(gameState.secretWord)) {
         finishGame('impostor', gameState.players);
     } else {
-        finishGame('citizens', gameState.players);
+        const remainingImpostors = gameState.players.filter(p => !p.isDead && p.role === 'impostor').length;
+        
+        if (remainingImpostors === 0) {
+            finishGame('citizens', gameState.players);
+        } else {
+            setFeedback({
+                type: 'info',
+                title: '¡FALLÓ EL TIRO!',
+                subtitle: 'Se equivocó de palabra',
+                description: `El impostor ha sido eliminado, pero todavía quedan ${remainingImpostors} dando vueltas.`
+            });
+            setGameState(prev => ({ ...prev, phase: 'DEBATE' }));
+        }
     }
   };
 
   const continueRound = () => {
-    setEjectedInnocent(null);
+    setFeedback(null);
     setGameState(prev => ({ ...prev, phase: 'DEBATE' }));
   };
 
@@ -222,51 +256,50 @@ export default function App() {
   const handleResetToSetup = () => {
      setGameState(prev => ({ ...prev, phase: 'SETUP' }));
      setShowInGameSettings(false);
+     localStorage.removeItem('impostor_game_state');
   };
 
   const handleFullReset = () => {
-     // Restart current game with same settings
      handleReplay();
      setShowInGameSettings(false);
   };
+
+  const handleReturnToMenu = () => {
+    setAppMode('LANDING');
+    setShowInGameSettings(false);
+  };
   
-  // INNOCENT EJECTED SCREEN
-  if (ejectedInnocent) {
-    const victim = gameState.players.find(p => p.name === ejectedInnocent);
-    const wasUndercover = victim?.role === 'undercover';
+  // -- Feedback Overlay --
+  if (feedback) {
+    const isSuccess = feedback.type === 'success';
+    const isInfo = feedback.type === 'info';
     
+    let Icon = AlertOctagon;
+    let colorClass = 'text-red-500';
+    let bgClass = 'bg-red-500/20 border-red-500/50';
+
+    if (isSuccess) {
+        Icon = CheckCircle;
+        colorClass = 'text-green-500';
+        bgClass = 'bg-green-500/20 border-green-500/50';
+    } else if (isInfo) {
+        Icon = Skull;
+        colorClass = 'text-blue-500';
+        bgClass = 'bg-blue-500/20 border-blue-500/50';
+    }
+
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-fade-in relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900 via-slate-950 to-slate-950"></div>
-        
-        <div className="relative z-10 w-full max-w-md bg-slate-900/80 p-8 rounded-3xl border-2 border-slate-800 shadow-2xl backdrop-blur-xl">
-            <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500 border-2 border-red-500/50 animate-pulse">
-                <AlertOctagon size={48} />
+        <div className={`absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] ${isSuccess ? 'from-green-900' : 'from-red-900'} via-slate-950 to-slate-950`}></div>
+        <div className="relative z-10 w-full max-w-md bg-slate-900/90 p-8 rounded-3xl border-2 border-slate-800 shadow-2xl backdrop-blur-xl">
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 ${bgClass} ${colorClass} border-2 animate-bounce-slow`}>
+                <Icon size={48} />
             </div>
-            
-            <h1 className="text-4xl font-black text-white mb-2 uppercase italic tracking-tighter transform -rotate-2">
-                ¡QUÉ PIFIADA!
-            </h1>
-            
+            <h1 className="text-3xl font-black text-white mb-2 uppercase italic tracking-tighter">{feedback.title}</h1>
             <div className="bg-slate-800 rounded-xl p-4 my-6 border border-slate-700">
-                <p className="text-xl text-slate-300">
-                    <span className="font-bold text-blue-400 block text-2xl mb-1">{ejectedInnocent}</span> 
-                    {wasUndercover ? (
-                        <>era un <span className="font-bold text-yellow-400">ENCUBIERTO</span>.</>
-                    ) : (
-                        <>era un <span className="font-bold text-green-400">CIUDADANO</span>.</>
-                    )}
-                </p>
-                {wasUndercover && (
-                    <p className="text-slate-400 text-sm mt-2 italic">Estaba más perdido que turco en la neblina, pero no era el Impostor.</p>
-                )}
+                <p className="text-xl text-slate-200 font-bold mb-2">{feedback.subtitle}</p>
+                <p className="text-slate-400 text-sm">{feedback.description}</p>
             </div>
-            
-            <p className="text-slate-400 mb-8 text-sm font-medium">
-                El Impostor se les está cagando de risa.<br/>
-                Sigan debatiendo, giles.
-            </p>
-            
             <Button onClick={continueRound} fullWidth variant="primary" className="py-4 text-lg font-black uppercase tracking-wide shadow-lg shadow-blue-900/30">
                 <PlayCircle className="inline mr-2" size={24} /> Seguir Jugando
             </Button>
@@ -275,17 +308,31 @@ export default function App() {
     );
   }
 
-  // Active game phases check
+  // -- RENDER: LANDING --
+  if (appMode === 'LANDING') {
+      return (
+          <LandingPhase 
+            onSelectLocal={() => setAppMode('LOCAL')} 
+            onSelectOnline={() => setAppMode('ONLINE_LOBBY')} 
+          />
+      );
+  }
+
+  // -- RENDER: ONLINE LOBBY --
+  if (appMode === 'ONLINE_LOBBY') {
+      return (
+          <OnlineLobby onBack={() => setAppMode('LANDING')} />
+      );
+  }
+
+  // -- RENDER: GAME (Local) --
   const isGameActive = ['ASSIGNMENT_WAIT', 'ASSIGNMENT_REVEAL', 'DEBATE', 'VOTING', 'LAST_BULLET'].includes(gameState.phase);
-  
-  // Hide scoreboard during sensitive role assignment phases
   const isAssignmentPhase = ['ASSIGNMENT_WAIT', 'ASSIGNMENT_REVEAL'].includes(gameState.phase);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-hidden relative">
       
-      {/* GLOBAL FLOATING SCOREBOARD BUTTON (Top Right) */}
-      {/* Hidden during assignment to prevent distraction/accidental clicks during phone pass */}
+      {/* FLOATING SCOREBOARD */}
       {!isAssignmentPhase && (
         <div className="fixed top-4 right-4 z-50">
             <button 
@@ -306,9 +353,9 @@ export default function App() {
         />
       )}
 
-      {/* IN-GAME SETTINGS BUTTON (Top Left - Always active when game is running) */}
-      {isGameActive && (
-        <div className="fixed top-4 left-4 z-50">
+      {/* IN-GAME SETTINGS */}
+      {/* Show settings always if game is running OR if we are in SETUP (to go back to menu) */}
+      <div className="fixed top-4 left-4 z-50">
             <button 
                 onClick={() => setShowInGameSettings(!showInGameSettings)}
                 className="bg-slate-800/80 p-3 rounded-full text-slate-300 hover:text-white border border-slate-600 hover:bg-slate-700 transition-all shadow-lg backdrop-blur-sm"
@@ -319,26 +366,34 @@ export default function App() {
             {showInGameSettings && (
                 <div className="absolute top-14 left-0 w-64 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col gap-2 animate-fade-in z-50">
                     <button 
-                        onClick={handleResetToSetup}
+                        onClick={handleReturnToMenu}
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 text-left text-sm font-bold text-slate-300 hover:text-white transition-colors"
                     >
-                        <ArrowLeft size={16} /> Volver a Configurar
+                        <Home size={16} /> Menú Principal
                     </button>
-                    <button 
-                        onClick={handleFullReset}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 text-left text-sm font-bold text-slate-300 hover:text-white transition-colors"
-                    >
-                        <RefreshCw size={16} /> Reiniciar Partida
-                    </button>
+                    {isGameActive && (
+                        <>
+                        <button 
+                            onClick={handleResetToSetup}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 text-left text-sm font-bold text-slate-300 hover:text-white transition-colors"
+                        >
+                            <ArrowLeft size={16} /> Volver a Configurar
+                        </button>
+                        <button 
+                            onClick={handleFullReset}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 text-left text-sm font-bold text-slate-300 hover:text-white transition-colors"
+                        >
+                            <RefreshCw size={16} /> Reiniciar Partida
+                        </button>
+                        </>
+                    )}
                 </div>
             )}
             
-            {/* Backdrop to close settings */}
             {showInGameSettings && (
                 <div className="fixed inset-0 z-40" onClick={() => setShowInGameSettings(false)}></div>
             )}
         </div>
-      )}
 
       <div className="max-w-md mx-auto min-h-screen flex flex-col relative">
         
@@ -357,6 +412,7 @@ export default function App() {
             key={gameState.players[gameState.currentPlayerIndex].id} 
             player={gameState.players[gameState.currentPlayerIndex]}
             onNext={handleNextPlayer}
+            revealMode='pass-and-play'
           />
         )}
 
@@ -376,7 +432,7 @@ export default function App() {
 
         {gameState.phase === 'LAST_BULLET' && (
             <LastBulletPhase 
-                impostorName={gameState.players.find(p => p.role === 'impostor')?.name || 'El Impostor'}
+                impostorName={gameState.players.find(p => p.role === 'impostor' && p.isDead)?.name || 'El Impostor'}
                 onGuess={handleLastBulletGuess}
             />
         )}
@@ -388,7 +444,7 @@ export default function App() {
             secretWord={gameState.secretWord}
             scores={scores}
             onPlayAgain={handleReplay}
-            onChangeSetup={() => setGameState(prev => ({ ...prev, phase: 'SETUP' }))}
+            onChangeSetup={handleResetToSetup}
           />
         )}
       </div>

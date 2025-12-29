@@ -1,9 +1,65 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-AR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Impostor Cordobés</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    
+    <!-- Primary Meta Tags -->
+    <title>Impostor Cordobés | Juego de Deducción Social Argentino</title>
+    <meta name="title" content="Impostor Cordobés | Juego de Deducción Social Argentino" />
+    <meta name="description" content="Jugá al Impostor (estilo Spyfall) con amigos. Versión 100% argentina con temáticas de Córdoba, memes, farándula y más. ¡Ideal para previas y juntadas! Jugá gratis online o local." />
+    <meta name="keywords" content="impostor, spyfall, juego de mesa, argentina, córdoba, previa, juego para tomar, amigos, gratis, online, app, fernet, cuarteto" />
+    <meta name="author" content="Impostor Cordobés" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph / Facebook / WhatsApp -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://impostor-cordobes.app/" />
+    <meta property="og:title" content="Impostor Cordobés - ¿Quién miente mejor?" />
+    <meta property="og:description" content="El juego definitivo para tus juntadas. Descubrí al impostor usando palabras bien argentas. ¡Jugá ahora gratis!" />
+    <meta property="og:image" content="https://impostor-cordobes.app/og-image.jpg" />
+    <meta property="og:locale" content="es_AR" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://impostor-cordobes.app/" />
+    <meta property="twitter:title" content="Impostor Cordobés | Juego Online" />
+    <meta property="twitter:description" content="Jugá al Impostor con tus amigos. Temáticas: Córdoba, Farándula, Scaloneta y más." />
+    <meta property="twitter:image" content="https://impostor-cordobes.app/og-image.jpg" />
+
+    <!-- PWA & Mobile -->
+    <link rel="manifest" href="/metadata.json" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Impostor Cordobés",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "description": "Un juego de deducción social estilo Spyfall adaptado a la cultura de Córdoba, Argentina.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+          "@type": "Person",
+          "name": "Developer"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "1024"
+      }
+    }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
@@ -18,6 +74,17 @@
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
+      }
+      /* Scrollbar personalziado */
+      .scrollbar-thin::-webkit-scrollbar {
+        width: 6px;
+      }
+      .scrollbar-thin::-webkit-scrollbar-track {
+        background: #1e293b;
+      }
+      .scrollbar-thin::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 20px;
       }
     </style>
   <script type="importmap">

@@ -1,6 +1,9 @@
+
 export type Role = 'citizen' | 'impostor' | 'undercover';
 
 export type GameMode = 'classic' | 'chaos' | 'hardcore';
+
+export type AppMode = 'LANDING' | 'LOCAL' | 'ONLINE_LOBBY' | 'ONLINE_GAME';
 
 export type GamePhase = 
   | 'SETUP' 

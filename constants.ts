@@ -114,7 +114,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Historia', undercover: 'Cuento' },
   ],
   religion: [
-    // Existentes refinados
     { normal: 'Dios', undercover: 'Messi' },
     { normal: 'Infierno', undercover: 'Verano' },
     { normal: 'Cielo', undercover: 'Techo' },
@@ -130,20 +129,19 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Navidad', undercover: 'Cumpleaños' },
     { normal: 'Adán y Eva', undercover: 'Los Pimpinela' },
     { normal: 'Mandamientos', undercover: 'Reglas' },
-    // Nuevos (+30)
     { normal: 'Ángel', undercover: 'Fantasma' },
     { normal: 'Rezar', undercover: 'Pedir' },
     { normal: 'Cruz', undercover: 'Espada' },
     { normal: 'Alma', undercover: 'Sombra' },
     { normal: 'Bautismo', undercover: 'Baño' },
-    { normal: 'Casamiento', undercover: 'Funeral' }, // Humor negro
+    { normal: 'Casamiento', undercover: 'Funeral' },
     { normal: 'Confesión', undercover: 'Chisme' },
     { normal: 'Paraíso', undercover: 'Playa' },
     { normal: 'Demonio', undercover: 'Suegra' },
     { normal: 'Rosario', undercover: 'Collar' },
     { normal: 'Santo', undercover: 'Estatua' },
     { normal: 'Fe', undercover: 'Esperanza' },
-    { normal: 'Templo', undercover: 'Cine' }, // Lugares de silencio
+    { normal: 'Templo', undercover: 'Cine' },
     { normal: 'Ofrenda', undercover: 'Propina' },
     { normal: 'Profeta', undercover: 'Mentiroso' },
     { normal: 'Apocalipsis', undercover: 'Fin de Mes' },
@@ -155,7 +153,7 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Religión', undercover: 'Fútbol' },
     { normal: 'Culto', undercover: 'Fan Club' },
     { normal: 'Espíritu', undercover: 'Viento' },
-    { normal: 'Resurrección', undercover: 'Siesta' }, // Despertar
+    { normal: 'Resurrección', undercover: 'Siesta' },
     { normal: 'Génesis', undercover: 'Principio' },
     { normal: 'Pastor', undercover: 'Vendedor' },
     { normal: 'Monaguillo', undercover: 'Ayudante' },
@@ -165,7 +163,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Cuaresma', undercover: 'Dieta' },
   ],
   cordoba: [
-    // Existentes refinados
     { normal: 'Fernet', undercover: 'Jarabe' },
     { normal: 'Pritty', undercover: 'Limonada' },
     { normal: 'La Mona Jiménez', undercover: 'Tarzán' },
@@ -177,12 +174,11 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Arco de Córdoba', undercover: 'Puente' },
     { normal: 'Culia', undercover: 'Hermano' },
     { normal: 'Bondi', undercover: 'Lancha' },
-    { normal: 'Bailazo', undercover: 'Gimnasio' }, // Se transpira
+    { normal: 'Bailazo', undercover: 'Gimnasio' },
     { normal: 'Talleres', undercover: 'Mecánico' },
     { normal: 'Dique', undercover: 'Pared' },
     { normal: 'Cabrito', undercover: 'Perro' },
-    // Nuevos (+30)
-    { normal: 'Gato', undercover: 'Peluca' }, // Expresión cordobesa
+    { normal: 'Gato', undercover: 'Peluca' },
     { normal: 'Vino', undercover: 'Agua' },
     { normal: 'Joda', undercover: 'Trabajo' },
     { normal: 'Asado', undercover: 'Quema' },
@@ -204,17 +200,37 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Estudiantes', undercover: 'Vagos' },
     { normal: 'Nueva Córdoba', undercover: 'Pasarela' },
     { normal: 'Güemes', undercover: 'Hipster' },
-    { normal: 'Conigiglio', undercover: 'Helado' }, // Referencia local
+    { normal: 'Conigiglio', undercover: 'Helado' },
     { normal: 'Caño', undercover: 'Tubo' },
     { normal: 'Lomito', undercover: 'Hamburguesa' },
     { normal: 'Música', undercover: 'Gritos' },
     { normal: 'Amigo', undercover: 'Desconocido' },
-    { normal: 'Insulto', undercover: 'Saludo' }, // En Cba es común
+    { normal: 'Insulto', undercover: 'Saludo' },
     { normal: 'Tonada', undercover: 'Canto' },
     { normal: 'Chiste', undercover: 'Mentira' },
+    // Nuevos
+    { normal: 'Jarra', undercover: 'Vaso' },
+    { normal: 'Hielo', undercover: 'Piedra' },
+    { normal: 'Embalse', undercover: 'Pileta' },
+    { normal: 'Burro', undercover: 'Caballo' },
+    { normal: 'Tunga Tunga', undercover: 'Música' },
+    { normal: 'Caravana', undercover: 'Excursión' },
+    { normal: 'Cucú', undercover: 'Pájaro' },
+    { normal: 'Sargento Cabral', undercover: 'Estadio' },
+    { normal: 'Pati', undercover: 'Hamburguesa' },
+    { normal: 'Criollito', undercover: 'Pan' },
+    { normal: 'Costanera', undercover: 'Rambla' },
+    { normal: 'Kempes', undercover: 'Cancha' },
+    { normal: 'Instituto', undercover: 'Colegio' },
+    { normal: 'Racing', undercover: 'Carrera' },
+    { normal: 'Chateau', undercover: 'Castillo' },
+    { normal: 'Paseo del Buen Pastor', undercover: 'Iglesia' },
+    { normal: 'Cerro de las Rosas', undercover: 'Jardín' },
+    { normal: 'Villa Warcalde', undercover: 'Campo' },
+    { normal: 'Feriar', undercover: 'Mercado' },
+    { normal: 'Tropezón', undercover: 'Caída' },
   ],
   argentina: [
-    // Existentes refinados
     { normal: 'Mate', undercover: 'Pasto' },
     { normal: 'Asado', undercover: 'Reunión' },
     { normal: 'Dulce de Leche', undercover: 'Barro' },
@@ -231,7 +247,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Jubilación', undercover: 'Hambre' },
     { normal: 'Truco', undercover: 'Trampa' },
     { normal: 'Gaucho', undercover: 'Hipster' },
-    // Nuevos (+30)
     { normal: 'Fútbol', undercover: 'Religión' },
     { normal: 'Maradona', undercover: 'Dios' },
     { normal: 'Político', undercover: 'Payaso' },
@@ -262,9 +277,29 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Sube', undercover: 'Tarjeta' },
     { normal: 'Plaza', undercover: 'Baño' },
     { normal: 'Perro', undercover: 'Hijo' },
+    // Nuevos
+    { normal: 'Casa Rosada', undercover: 'Castillo' },
+    { normal: 'Pampa', undercover: 'Cancha' },
+    { normal: 'Poncho', undercover: 'Sábana' },
+    { normal: 'Yaguareté', undercover: 'Gato' },
+    { normal: '9 de Julio', undercover: 'Pista' },
+    { normal: 'Guiso', undercover: 'Sopa' },
+    { normal: 'Mantecol', undercover: 'Jabón' },
+    { normal: 'Tereré', undercover: 'Jugo' },
+    { normal: 'Fainá', undercover: 'Pizza' },
+    { normal: 'Birome', undercover: 'Lápiz' },
+    { normal: 'Bondiola', undercover: 'Jamón' },
+    { normal: 'Picada', undercover: 'Cena' },
+    { normal: 'Soda', undercover: 'Agua con Gas' },
+    { normal: 'Chocotorta', undercover: 'Tiramisú' },
+    { normal: 'Toripollo', undercover: 'Engendro' }, // Clásico meme/comida ruta
+    { normal: 'Alambre', undercover: 'Hilo' }, // Lo atamo con alambre
+    { normal: 'Flete', undercover: 'Mudanza' },
+    { normal: 'Prode', undercover: 'Lotería' },
+    { normal: 'Quini 6', undercover: 'Jubilación' },
+    { normal: 'Campera', undercover: 'Buzo' },
   ],
   farandula: [
-    // Existentes refinados
     { normal: 'Vedette', undercover: 'Plumero' },
     { normal: 'Chimento', undercover: 'Noticia' },
     { normal: 'Escándalo', undercover: 'Show' },
@@ -278,7 +313,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Jurado', undercover: 'Verdugo' },
     { normal: 'Rating', undercover: 'Dinero' },
     { normal: 'Paparazzi', undercover: 'Mosquito' },
-    // Nuevos (+30)
     { normal: 'Botox', undercover: 'Plástico' },
     { normal: 'Cirugía', undercover: 'Photoshop' },
     { normal: 'Romance', undercover: 'Contrato' },
@@ -311,7 +345,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Ego', undercover: 'Globo' },
   ],
   comida: [
-    // Existentes refinados
     { normal: 'Milanesa', undercover: 'Zapato' },
     { normal: 'Pizza', undercover: 'Rueda' },
     { normal: 'Locro', undercover: 'Vómito' }, // Por el aspecto
@@ -323,7 +356,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Molleja', undercover: 'Grasa' },
     { normal: 'Morcilla', undercover: 'Carbón' },
     { normal: 'Papas Fritas', undercover: 'Palitos' },
-    // Nuevos (+30)
     { normal: 'Fideos', undercover: 'Gusanos' },
     { normal: 'Tuco', undercover: 'Sangre' },
     { normal: 'Queso', undercover: 'Plástico' },
@@ -356,7 +388,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Sal', undercover: 'Arena' },
   ],
   futbol: [
-    // Existentes refinados
     { normal: 'Gol', undercover: 'Beso' },
     { normal: 'Árbitro', undercover: 'Ladrón' },
     { normal: 'Offside', undercover: 'Adelanto' },
@@ -368,7 +399,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'DT', undercover: 'Padre' },
     { normal: 'Arquero', undercover: 'Manos' },
     { normal: 'Var', undercover: 'Cine' },
-    // Nuevos (+30)
     { normal: 'Cancha', undercover: 'Potrero' },
     { normal: 'Césped', undercover: 'Alfombra' },
     { normal: 'Tribuna', undercover: 'Jaula' },
@@ -401,7 +431,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Contrato', undercover: 'Papel' },
   ],
   marcas: [
-    // Existentes refinados
     { normal: 'Manaos', undercover: 'Veneno' },
     { normal: 'Marolio', undercover: 'Aceite' },
     { normal: 'Piturro', undercover: 'Cartón' },
@@ -412,7 +441,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Quilmes', undercover: 'Agua' },
     { normal: 'Flybondi', undercover: 'Colectivo' },
     { normal: 'Mercado Libre', undercover: 'Correo' },
-    // Nuevos (+30)
     { normal: 'McDonalds', undercover: 'Plástico' },
     { normal: 'Burger King', undercover: 'Carbón' },
     { normal: 'Starbucks', undercover: 'Agua Sucia' },
@@ -445,7 +473,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Playstation', undercover: 'Juguete' },
   ],
   musica: [
-    // Existentes refinados
     { normal: 'Rock', undercover: 'Ruido' },
     { normal: 'Cumbia', undercover: 'Alcohol' },
     { normal: 'Recital', undercover: 'Misa' },
@@ -455,7 +482,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Cantante', undercover: 'Grito' },
     { normal: 'Autotune', undercover: 'Robot' },
     { normal: 'Trap', undercover: 'Balbuceo' },
-    // Nuevos (+30)
     { normal: 'Reggaeton', undercover: 'Sexo' },
     { normal: 'Pop', undercover: 'Chicle' },
     { normal: 'Jazz', undercover: 'Aburrido' },
@@ -488,7 +514,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Valla', undercover: 'Reja' },
   ],
   lugares: [
-    // Existentes refinados
     { normal: 'Telo', undercover: 'Oficina' },
     { normal: 'Playa', undercover: 'Arenero' },
     { normal: 'Cine', undercover: 'Cueva' },
@@ -500,7 +525,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Cementerio', undercover: 'Jardín' },
     { normal: 'Zoológico', undercover: 'Cárcel' },
     { normal: 'Motel', undercover: 'Hotel' },
-    // Nuevos (+30)
     { normal: 'Escuela', undercover: 'Cárcel' },
     { normal: 'Universidad', undercover: 'Laberinto' },
     { normal: 'Oficina', undercover: 'Jaula' },
@@ -533,7 +557,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Ascensor', undercover: 'Caja' },
   ],
   objetos: [
-    // Existentes refinados
     { normal: 'Heladera', undercover: 'Invierno' },
     { normal: 'Lavarropas', undercover: 'Torbellino' },
     { normal: 'Televisor', undercover: 'Espejo' },
@@ -544,7 +567,6 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Puerta', undercover: 'Tabla' },
     { normal: 'Llave', undercover: 'Fierro' },
     { normal: 'Almohada', undercover: 'Bolsa' },
-    // Nuevos (+30)
     { normal: 'Cuchillo', undercover: 'Espada' },
     { normal: 'Cuchara', undercover: 'Pala' },
     { normal: 'Plato', undercover: 'Disco' },
