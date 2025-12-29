@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Copy, Share2, Users, Crown, LogIn, Plus, Play, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Copy, Share2, Users, Crown, LogIn, Plus, Play, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Button } from './Button';
 import { Player, Role } from '../types';
 import { AssignmentPhase } from './AssignmentPhase';
@@ -14,6 +14,16 @@ interface OnlineLobbyProps {
 
 type OnlinePhase = 'LOBBY' | 'ASSIGNMENT' | 'DEBATE' | 'VOTING' | 'RESULT';
 
+interface RoomData {
+  code: string;
+  hostId: string;
+  phase: OnlinePhase;
+  players: Player[];
+  secretWord: string;
+  winner: 'citizens' | 'impostor' | null;
+  updatedAt: number;
+}
+
 export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
   // Navigation & Auth State
   const [view, setView] = useState<'menu' | 'join' | 'create'>('menu');
@@ -22,56 +32,126 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
   
   // Lobby State
   const [isInRoom, setIsInRoom] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState('');
-  const [hostName, setHostName] = useState('');
-  
-  // Game Logic State
-  const [phase, setPhase] = useState<OnlinePhase>('LOBBY');
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [currentRoom, setCurrentRoom] = useState<RoomData | null>(null);
   const [myPlayerId, setMyPlayerId] = useState<string>('');
-  const [secretWord, setSecretWord] = useState('');
-  const [winner, setWinner] = useState<'citizens' | 'impostor' | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Polling Interval Ref
+  const pollRef = useRef<number | null>(null);
+
+  // --- LOCAL STORAGE "BACKEND" LOGIC ---
+  
+  const getRoom = (code: string): RoomData | null => {
+    const data = localStorage.getItem(`IMPOSTOR_ROOM_${code}`);
+    return data ? JSON.parse(data) : null;
+  };
+
+  const saveRoom = (data: RoomData) => {
+    data.updatedAt = Date.now();
+    localStorage.setItem(`IMPOSTOR_ROOM_${data.code}`, JSON.stringify(data));
+    setCurrentRoom(data);
+  };
+
+  // --- POLLING FOR UPDATES ---
+  useEffect(() => {
+    if (isInRoom && currentRoom?.code) {
+      pollRef.current = window.setInterval(() => {
+        const serverRoom = getRoom(currentRoom.code);
+        
+        if (!serverRoom) {
+          // Room deleted or invalid
+          handleExitRoom();
+          setErrorMsg("La sala fue cerrada.");
+          return;
+        }
+
+        // Check if data changed by comparing timestamps or simple JSON stringify
+        if (serverRoom.updatedAt !== currentRoom.updatedAt) {
+          setCurrentRoom(serverRoom);
+        }
+      }, 500); // Check every 500ms
+    }
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [isInRoom, currentRoom?.code, currentRoom?.updatedAt]);
+
 
   // --- ACTIONS ---
 
   const handleCreate = () => {
     if (!playerName.trim()) return;
-    const code = Math.random().toString(36).substring(2, 6).toUpperCase();
-    setGeneratedCode(code);
-    setHostName(playerName);
-    setMyPlayerId('host');
-    // Simulating other players for the demo
-    setPlayers([
-        { id: 'host', name: playerName, role: 'citizen', isDead: false },
-        { id: 'p2', name: 'Jugador 2', role: 'citizen', isDead: false },
-        { id: 'p3', name: 'Jugador 3', role: 'citizen', isDead: false },
-        { id: 'p4', name: 'Jugador 4', role: 'citizen', isDead: false },
-    ]);
+    
+    const newCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const hostId = `host-${Date.now()}`;
+    
+    const newRoom: RoomData = {
+      code: newCode,
+      hostId: hostId,
+      phase: 'LOBBY',
+      players: [{ 
+        id: hostId, 
+        name: playerName, 
+        role: 'citizen', 
+        isDead: false 
+      }],
+      secretWord: '',
+      winner: null,
+      updatedAt: Date.now()
+    };
+
+    saveRoom(newRoom);
+    setMyPlayerId(hostId);
+    setCurrentRoom(newRoom);
     setIsInRoom(true);
   };
 
   const handleJoin = () => {
     if (!playerName.trim() || roomCode.length !== 4) return;
-    setGeneratedCode(roomCode.toUpperCase());
-    setHostName('Anfitrión'); // We don't know the host name in this demo logic
-    setMyPlayerId('me');
-    // Simulating joining an existing room
-    setPlayers([
-        { id: 'host', name: 'Anfitrión', role: 'citizen', isDead: false },
-        { id: 'me', name: playerName, role: 'citizen', isDead: false },
-        { id: 'p3', name: 'Jugador 3', role: 'citizen', isDead: false },
-        { id: 'p4', name: 'Jugador 4', role: 'citizen', isDead: false },
-    ]);
+    
+    const room = getRoom(roomCode.toUpperCase());
+    
+    if (!room) {
+      setErrorMsg("Sala no encontrada. Verificá el código.");
+      return;
+    }
+
+    if (room.phase !== 'LOBBY') {
+        setErrorMsg("La partida ya comenzó.");
+        return;
+    }
+
+    if (room.players.some(p => p.name.toLowerCase() === playerName.toLowerCase())) {
+        setErrorMsg("Ese nombre ya está en uso en esta sala.");
+        return;
+    }
+
+    const playerId = `p-${Date.now()}`;
+    const newPlayer: Player = {
+        id: playerId,
+        name: playerName,
+        role: 'citizen',
+        isDead: false
+    };
+
+    room.players.push(newPlayer);
+    saveRoom(room); // Update DB
+    
+    setMyPlayerId(playerId);
+    setCurrentRoom(room);
     setIsInRoom(true);
+    setErrorMsg(null);
   };
 
   const handleStartGame = () => {
-    // 1. Setup Game Data (Simulating Server Logic)
-    const { secretWord: word } = getGameWords(['argentina', 'cordoba']); // Default themes for demo
-    setSecretWord(word);
+    if (!currentRoom) return;
 
-    // 2. Assign Roles Randomly
-    const newPlayers = [...players];
+    // 1. Setup Game Data
+    const { secretWord: word } = getGameWords(['argentina', 'cordoba']);
+    
+    // 2. Assign Roles
+    const newPlayers = [...currentRoom.players];
     const impostorIndex = Math.floor(Math.random() * newPlayers.length);
     
     newPlayers.forEach((p, index) => {
@@ -85,37 +165,70 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
         }
     });
 
-    setPlayers(newPlayers);
-    setPhase('ASSIGNMENT');
+    const updatedRoom: RoomData = {
+        ...currentRoom,
+        secretWord: word,
+        players: newPlayers,
+        phase: 'ASSIGNMENT'
+    };
+
+    saveRoom(updatedRoom);
+  };
+
+  const handleNextPhase = (nextPhase: OnlinePhase) => {
+    if (!currentRoom) return;
+    saveRoom({ ...currentRoom, phase: nextPhase });
   };
 
   const handleVote = (victimId: string) => {
-    // In a real app, we would send the vote to the server.
-    // For this demo, we simulate the result immediately.
+    if (!currentRoom) return;
     
-    const victim = players.find(p => p.id === victimId);
+    // Logic: In this simple implementation, ANY vote kills immediately (Chaos mode style)
+    // Or we could implement vote counting, but let's keep it snappy for the demo.
+    
+    const victim = currentRoom.players.find(p => p.id === victimId);
     if (!victim) return;
 
-    // Simulate outcome
+    let winner: 'citizens' | 'impostor' = 'impostor';
+    
     if (victim.role === 'impostor') {
-        setWinner('citizens');
+        winner = 'citizens';
     } else {
-        setWinner('impostor');
+        winner = 'impostor';
     }
-    setPhase('RESULT');
+
+    saveRoom({
+        ...currentRoom,
+        winner: winner,
+        phase: 'RESULT'
+    });
   };
 
-  const resetGame = () => {
-      setPhase('LOBBY');
+  const handleExitRoom = () => {
+    setIsInRoom(false);
+    setCurrentRoom(null);
+    setMyPlayerId('');
+    setView('menu');
+  };
+
+  const handlePlayAgain = () => {
+    if (!currentRoom) return;
+    saveRoom({
+        ...currentRoom,
+        phase: 'LOBBY',
+        players: currentRoom.players.map(p => ({ ...p, role: 'citizen', isDead: false, word: undefined })),
+        winner: null,
+        secretWord: ''
+    });
   };
 
   // Utilities
-  const copyCode = () => navigator.clipboard.writeText(generatedCode);
+  const copyCode = () => currentRoom && navigator.clipboard.writeText(currentRoom.code);
   const shareCode = () => {
-    if (navigator.share) {
+    if (currentRoom && navigator.share) {
         navigator.share({
             title: 'Impostor Cordobés',
-            text: `¡Entrá a mi sala! Código: ${generatedCode}`,
+            text: `¡Entrá a mi sala! Código: ${currentRoom.code}`,
             url: window.location.href
         }).catch(() => {});
     } else {
@@ -126,39 +239,68 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
   // --- RENDER PHASES ---
 
   // 1. ASSIGNMENT (Single Player View)
-  if (phase === 'ASSIGNMENT') {
-      const myPlayer = players.find(p => p.id === myPlayerId);
-      if (!myPlayer) return <div>Error loading player data</div>;
+  if (isInRoom && currentRoom?.phase === 'ASSIGNMENT') {
+      const myPlayer = currentRoom.players.find(p => p.id === myPlayerId);
+      
+      // Safety check if player disconnects or logic fails
+      if (!myPlayer) return <div className="p-10 text-center text-white">Error: Jugador no encontrado</div>;
 
       return (
           <div className="min-h-screen bg-slate-950 flex flex-col pt-8">
               <AssignmentPhase 
                 player={myPlayer} 
-                onNext={() => setPhase('DEBATE')} 
-                revealMode="single-player" // Critical: prevents "Pass Phone" UI
+                onNext={() => {
+                    // Only the Host can advance the global phase, but individual players just wait
+                    // For simplicity in this sync-model:
+                    // If I am host, I show a button "Start Debate"
+                    // If I am guest, I show "Waiting for host..."
+                }} 
+                revealMode="single-player" 
               />
+              
+              {/* Sync Control for Host */}
+              {myPlayerId === currentRoom.hostId && (
+                  <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/90 border-t border-slate-800 z-50">
+                      <Button onClick={() => handleNextPhase('DEBATE')} fullWidth variant="primary">
+                         INICIAR DEBATE (Todos listos)
+                      </Button>
+                  </div>
+              )}
+               {myPlayerId !== currentRoom.hostId && (
+                  <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/90 border-t border-slate-800 z-50 text-center text-slate-400 animate-pulse">
+                      Esperando al anfitrión...
+                  </div>
+              )}
           </div>
       );
   }
 
   // 2. DEBATE
-  if (phase === 'DEBATE') {
+  if (isInRoom && currentRoom?.phase === 'DEBATE') {
+      const isHost = myPlayerId === currentRoom.hostId;
       return (
           <div className="min-h-screen bg-slate-950 flex flex-col pt-4">
               <DebatePhase 
                 timerDuration={180} 
-                onTimerEnd={() => setPhase('VOTING')} 
+                onTimerEnd={() => {
+                    if (isHost) handleNextPhase('VOTING');
+                }} 
               />
+              {!isHost && (
+                <div className="text-center p-4 text-slate-500 text-sm">
+                    El anfitrión controla el tiempo.
+                </div>
+              )}
           </div>
       );
   }
 
   // 3. VOTING
-  if (phase === 'VOTING') {
+  if (isInRoom && currentRoom?.phase === 'VOTING') {
       return (
           <div className="min-h-screen bg-slate-950 flex flex-col pt-4">
               <VotingPhase 
-                players={players} 
+                players={currentRoom.players} 
                 onVote={handleVote} 
               />
           </div>
@@ -166,29 +308,35 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
   }
 
   // 4. RESULTS
-  if (phase === 'RESULT') {
+  if (isInRoom && currentRoom?.phase === 'RESULT') {
+      const isHost = myPlayerId === currentRoom.hostId;
       return (
           <div className="min-h-screen bg-slate-950 flex flex-col pt-4">
               <ResultPhase 
-                winner={winner || 'impostor'} 
-                players={players} 
-                secretWord={secretWord} 
-                scores={{}} // No scoring in demo
-                onPlayAgain={resetGame} 
-                onChangeSetup={() => { setIsInRoom(false); setPhase('LOBBY'); }} 
+                winner={currentRoom.winner || 'impostor'} 
+                players={currentRoom.players} 
+                secretWord={currentRoom.secretWord} 
+                scores={{}} 
+                onPlayAgain={isHost ? handlePlayAgain : () => {}} 
+                onChangeSetup={handleExitRoom} 
               />
+              {!isHost && (
+                  <div className="p-4 text-center text-slate-400 bg-slate-900">
+                      Esperando que el anfitrión reinicie...
+                  </div>
+              )}
           </div>
       );
   }
 
   // 5. LOBBY VIEW (WAITING ROOM)
-  if (isInRoom) {
-      const isHost = myPlayerId === 'host';
+  if (isInRoom && currentRoom) {
+      const isHost = myPlayerId === currentRoom.hostId;
 
       return (
         <div className="flex flex-col min-h-screen p-4 animate-fade-in relative bg-slate-950 text-slate-100">
             {/* Header/Back */}
-            <button onClick={() => setIsInRoom(false)} className="absolute top-4 left-4 p-3 bg-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors z-20">
+            <button onClick={handleExitRoom} className="absolute top-4 left-4 p-3 bg-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors z-20">
                 <ArrowLeft size={20} />
             </button>
 
@@ -204,7 +352,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                             className="bg-slate-800 border-2 border-blue-500/50 rounded-3xl p-8 cursor-pointer hover:bg-slate-800/80 transition-all active:scale-95 flex flex-col items-center gap-3 group shadow-2xl relative overflow-hidden"
                         >
                             <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <h1 className="text-7xl font-black text-white tracking-widest relative z-10">{generatedCode}</h1>
+                            <h1 className="text-7xl font-black text-white tracking-widest relative z-10">{currentRoom.code}</h1>
                             <p className="text-blue-400 text-xs font-bold uppercase flex items-center gap-2 group-hover:text-blue-300 relative z-10">
                                 <Copy size={14} /> Tocar para copiar
                             </p>
@@ -213,18 +361,27 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
 
                     <div className="w-full space-y-3">
                         {isHost ? (
-                            <Button onClick={handleStartGame} variant="primary" fullWidth className="flex items-center justify-center gap-2 py-4 text-lg font-black shadow-lg shadow-blue-900/40 animate-pulse">
+                            <Button onClick={handleStartGame} disabled={currentRoom.players.length < 3} variant="primary" fullWidth className="flex items-center justify-center gap-2 py-4 text-lg font-black shadow-lg shadow-blue-900/40 animate-pulse">
                                 <Play size={24} fill="currentColor" /> INICIAR PARTIDA
                             </Button>
                         ) : (
-                            <Button disabled variant="secondary" fullWidth className="opacity-70 cursor-not-allowed py-4 text-lg">
-                                Esperando al Host...
-                            </Button>
+                            <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 text-center">
+                                <p className="text-slate-400 text-sm animate-pulse mb-1">Esperando al anfitrión...</p>
+                                <p className="text-xs text-slate-600">Mínimo 3 jugadores</p>
+                            </div>
                         )}
                         
                         <Button onClick={shareCode} variant="ghost" fullWidth className="flex items-center justify-center gap-2 border border-slate-700">
                             <Share2 size={18} /> Invitar Amigos
                         </Button>
+                    </div>
+
+                     {/* Local Sync Warning */}
+                    <div className="bg-yellow-900/20 border border-yellow-500/30 p-3 rounded-lg flex items-start gap-2">
+                        <AlertTriangle className="text-yellow-500 shrink-0 mt-0.5" size={16} />
+                        <p className="text-[10px] text-yellow-200/80 leading-tight">
+                            <strong>Nota Demo:</strong> Esta sala funciona sincronizada entre pestañas de este mismo navegador. Abrí otra pestaña para probarlo.
+                        </p>
                     </div>
                 </div>
 
@@ -235,22 +392,22 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                             <Users size={24} /> Jugadores Conectados
                         </h3>
                         <span className="bg-slate-800 border border-slate-700 text-sm px-3 py-1 rounded-full text-slate-300 font-mono font-bold">
-                            {players.length}/10
+                            {currentRoom.players.length}
                         </span>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 content-start">
-                        {players.map((p, i) => (
+                        {currentRoom.players.map((p, i) => (
                             <div key={p.id} className="flex items-center gap-4 bg-slate-800 p-4 rounded-2xl border border-slate-700 animate-fade-in hover:border-slate-500 transition-colors">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg ${i === 0 ? 'bg-yellow-500 text-slate-900' : 'bg-slate-700 text-slate-300'}`}>
-                                    {i === 0 ? <Crown size={20} /> : <Users size={20} />}
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg ${p.id === currentRoom.hostId ? 'bg-yellow-500 text-slate-900' : 'bg-slate-700 text-slate-300'}`}>
+                                    {p.id === currentRoom.hostId ? <Crown size={20} /> : <Users size={20} />}
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="font-bold text-white text-lg truncate flex items-center gap-2">
                                         {p.name}
                                         {p.id === myPlayerId && <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded-full border border-blue-700">VOS</span>}
                                     </span>
-                                    {i === 0 && <span className="text-xs text-yellow-500 font-bold uppercase">Anfitrión</span>}
+                                    {p.id === currentRoom.hostId && <span className="text-xs text-yellow-500 font-bold uppercase">Anfitrión</span>}
                                 </div>
                             </div>
                         ))}
@@ -282,7 +439,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                         </div>
                         <h2 className="text-3xl md:text-5xl font-black text-white uppercase italic mb-2 tracking-tight">Multiplayer</h2>
                         <p className="text-slate-400 text-sm md:text-lg max-w-md mx-auto">
-                            Jugá con amigos a distancia.<br/>Cada uno desde su dispositivo.
+                            Jugá con amigos.<br/>Creá una sala y compartí el código.
                         </p>
                     </div>
 
@@ -296,7 +453,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                             </div>
                             <div className="text-center md:text-left">
                                 <span className="block font-black text-white text-xl uppercase mb-1">Crear Sala</span>
-                                <span className="text-slate-400 text-sm">Sos el anfitrión. Configurá la partida y pasá el código.</span>
+                                <span className="text-slate-400 text-sm">Sos el anfitrión.</span>
                             </div>
                         </button>
 
@@ -309,7 +466,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                             </div>
                             <div className="text-center md:text-left">
                                 <span className="block font-black text-white text-xl uppercase mb-1">Unirse</span>
-                                <span className="text-slate-400 text-sm">Ya tenés un código de sala para entrar.</span>
+                                <span className="text-slate-400 text-sm">Tengo código.</span>
                             </div>
                         </button>
                     </div>
@@ -345,6 +502,12 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                                 />
                             </div>
                         )}
+                        
+                        {errorMsg && (
+                            <div className="bg-red-500/20 border border-red-500/50 text-red-300 text-sm p-3 rounded-lg text-center font-bold">
+                                {errorMsg}
+                            </div>
+                        )}
 
                         <div className="pt-4 space-y-3">
                             <Button 
@@ -356,7 +519,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                             >
                                 {view === 'create' ? 'Generar Código' : 'Entrar a la Sala'}
                             </Button>
-                            <button onClick={() => setView('menu')} className="w-full text-center text-slate-500 text-sm hover:text-white py-3 transition-colors font-medium">
+                            <button onClick={() => { setView('menu'); setErrorMsg(null); }} className="w-full text-center text-slate-500 text-sm hover:text-white py-3 transition-colors font-medium">
                                 Cancelar
                             </button>
                         </div>
