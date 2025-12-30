@@ -7,6 +7,7 @@ import { AssignmentPhase } from './AssignmentPhase';
 import { DebatePhase } from './DebatePhase';
 import { VotingPhase } from './VotingPhase';
 import { ResultPhase } from './ResultPhase';
+import { PlayerAvatar } from './PlayerAvatar';
 import { getGameWords } from '../services/wordService';
 import { THEMES } from '../constants';
 
@@ -23,6 +24,7 @@ type OnlinePhase = 'LOBBY' | 'ASSIGNMENT' | 'DEBATE' | 'VOTING' | 'RESULT';
 interface GameConfig {
   themes: string[];
   impostorCount: number;
+  undercoverCount: number;
   gameMode: 'classic' | 'chaos' | 'hardcore';
 }
 
@@ -32,6 +34,7 @@ interface RoomData {
   phase: OnlinePhase;
   players: Player[];
   secretWord: string;
+  undercoverWord: string;
   winner: 'citizens' | 'impostor' | null;
   gameConfig?: GameConfig;
 }
@@ -51,14 +54,21 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
   const [myPlayerId, setMyPlayerId] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Connection State Management
+  const [connectionState, setConnectionState] = useState<'initial' | 'connecting' | 'connected' | 'reconnecting' | 'failed'>('initial');
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
+
   // Game Configuration (for host only)
   const [selectedThemes, setSelectedThemes] = useState<string[]>(['argentina']);
   const [impostorCount, setImpostorCount] = useState(1);
+  const [undercoverCount, setUndercoverCount] = useState(0);
   const [gameMode, setGameMode] = useState<'classic' | 'chaos' | 'hardcore'>('classic');
 
   // --- WEBSOCKET CONNECTION ---
-  
+
   useEffect(() => {
+    setConnectionState('connecting');
+
     // 1. Initialize Socket con opciones de reconexión
     const newSocket = io(SERVER_URL, {
         reconnection: true,
@@ -72,6 +82,8 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
     // 2. Event Listeners
     newSocket.on('connect', () => {
         setIsConnected(true);
+        setConnectionState('connected');
+        setConnectionAttempts(0);
         console.log("Conectado al servidor WS:", newSocket.id);
 
         // NUEVO: Reconectar a sala si estábamos en una
@@ -79,6 +91,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
         const savedPlayerId = sessionStorage.getItem('my_player_id');
 
         if (savedRoom && savedPlayerId) {
+            setConnectionState('reconnecting');
             console.log("Intentando reconexión a sala", savedRoom);
             newSocket.emit('reconnect_player', {
                 code: savedRoom,
@@ -87,13 +100,30 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
         }
     });
 
+    newSocket.on('reconnect_attempt', (attemptNumber) => {
+        setConnectionAttempts(attemptNumber);
+        setConnectionState('reconnecting');
+    });
+
     newSocket.on('disconnect', (reason) => {
         setIsConnected(false);
+
         if (reason === 'io server disconnect') {
+            setConnectionState('failed');
             setErrorMsg("El servidor cerró la conexión.");
         } else {
-            setErrorMsg("Conexión perdida. Reintentando...");
+            const savedRoom = sessionStorage.getItem('current_room_code');
+            if (savedRoom) {
+                setConnectionState('reconnecting');
+            } else {
+                setConnectionState('connecting');
+            }
         }
+    });
+
+    newSocket.on('reconnect_failed', () => {
+        setConnectionState('failed');
+        setErrorMsg("No se pudo conectar después de varios intentos.");
     });
 
     newSocket.on('error_msg', (msg: string) => {
@@ -161,6 +191,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
     const config: GameConfig = {
       themes: selectedThemes,
       impostorCount: impostorCount,
+      undercoverCount: undercoverCount,
       gameMode: gameMode,
     };
 
@@ -216,14 +247,58 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
 
   // --- RENDER PHASES ---
 
-  if (!isConnected) {
+  // Estado: Conectando inicialmente
+  if (connectionState === 'initial' || connectionState === 'connecting') {
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-6 text-center animate-fade-in">
-            <WifiOff size={48} className="text-red-500 mb-4 animate-pulse" />
-            <h2 className="text-2xl font-bold mb-2">Conectando al servidor...</h2>
-            <p className="text-slate-400 mb-6">Asegurate de que el backend esté corriendo en <span className="font-mono bg-slate-900 px-2 py-1 rounded">{SERVER_URL}</span></p>
-            <Button onClick={onBack} variant="secondary">Volver al Inicio</Button>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-6 text-center animate-fade-in">
+        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h2 className="text-2xl font-bold mb-2">Conectando al servidor...</h2>
+        <p className="text-slate-400 mb-6">
+          <span className="font-mono bg-slate-900 px-2 py-1 rounded">{SERVER_URL}</span>
+        </p>
+        <div className="flex gap-2">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"
+              style={{ animationDelay: `${i * 0.2}s` }}
+            />
+          ))}
         </div>
+      </div>
+    );
+  }
+
+  // Estado: Reconectando
+  if (connectionState === 'reconnecting') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-6 text-center animate-fade-in">
+        <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h2 className="text-2xl font-bold mb-2">Reconectando...</h2>
+        <p className="text-slate-400 mb-4">Intentando restablecer conexión</p>
+        {connectionAttempts > 0 && (
+          <p className="text-slate-500 text-sm">Intento {connectionAttempts}/5</p>
+        )}
+        <Button onClick={onBack} variant="secondary" className="mt-6">Cancelar</Button>
+      </div>
+    );
+  }
+
+  // Estado: Error/Fallo
+  if (connectionState === 'failed' || (!isConnected && connectionAttempts >= 5)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-6 text-center animate-fade-in">
+        <WifiOff size={48} className="text-red-500 mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Error de Conexión</h2>
+        <p className="text-slate-400 mb-4">{errorMsg || "No se pudo conectar"}</p>
+        <p className="text-slate-500 text-sm mb-6">
+          Verificá que el backend esté en <span className="font-mono bg-slate-900 px-2 py-1 rounded">{SERVER_URL}</span>
+        </p>
+        <div className="flex gap-3">
+          <Button onClick={() => window.location.reload()} variant="primary">Reintentar</Button>
+          <Button onClick={onBack} variant="secondary">Volver</Button>
+        </div>
+      </div>
     );
   }
 
@@ -284,9 +359,11 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
   if (isInRoom && currentRoom?.phase === 'VOTING') {
       return (
           <div className="min-h-screen bg-slate-950 flex flex-col pt-4">
-              <VotingPhase 
-                players={currentRoom.players} 
-                onVote={handleVote} 
+              <VotingPhase
+                players={currentRoom.players}
+                myPlayerId={myPlayerId}
+                onVote={handleVote}
+                socket={socket}
               />
           </div>
       );
@@ -432,6 +509,35 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                           </div>
                         </div>
 
+                        {/* Cantidad de Encubiertos - Solo chaos/hardcore */}
+                        {(gameMode === 'chaos' || gameMode === 'hardcore') && (
+                          <div>
+                            <label className="text-xs text-slate-400 mb-2 block">
+                              Encubiertos: {undercoverCount}
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setUndercoverCount(Math.max(0, undercoverCount - 1))}
+                                className="w-8 h-8 bg-slate-700 rounded text-white hover:bg-slate-600"
+                              >
+                                -
+                              </button>
+                              <div className="flex-1 bg-slate-900 rounded h-8 flex items-center justify-center font-bold text-yellow-400">
+                                {undercoverCount}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const maxUndercover = Math.max(0, Math.floor(currentRoom.players.length * 0.4) - impostorCount);
+                                  setUndercoverCount(Math.min(maxUndercover, undercoverCount + 1));
+                                }}
+                                className="w-8 h-8 bg-slate-700 rounded text-white hover:bg-slate-600"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Selector de Temas */}
                         <div>
                           <label className="text-xs text-slate-400 mb-2 block">
@@ -480,9 +586,12 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 content-start">
                         {currentRoom.players.map((p, i) => (
                             <div key={p.id} className="flex items-center gap-4 bg-slate-800 p-4 rounded-2xl border border-slate-700 animate-fade-in hover:border-slate-500 transition-colors">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg ${p.id === currentRoom.hostId ? 'bg-yellow-500 text-slate-900' : 'bg-slate-700 text-slate-300'}`}>
-                                    {p.id === currentRoom.hostId ? <Crown size={20} /> : <Users size={20} />}
-                                </div>
+                                <PlayerAvatar
+                                  avatar={p.avatar}
+                                  color={p.color}
+                                  isHost={p.id === currentRoom.hostId}
+                                  size="lg"
+                                />
                                 <div className="flex flex-col">
                                     <span className="font-bold text-white text-lg truncate flex items-center gap-2">
                                         {p.name}

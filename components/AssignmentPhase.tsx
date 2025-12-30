@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, ChevronRight, MousePointerClick, Check, Lock, ShieldAlert } from 'lucide-react';
+import { Eye, EyeOff, ChevronRight, MousePointerClick, Check, Lock, ShieldAlert, Drama } from 'lucide-react';
 import { Button } from './Button';
 import { Player } from '../types';
 
@@ -9,15 +9,17 @@ interface AssignmentPhaseProps {
   revealMode?: 'pass-and-play' | 'single-player'; // Default: pass-and-play
 }
 
-export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({ 
-  player, 
+export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
+  player,
   onNext,
-  revealMode = 'pass-and-play' 
+  revealMode = 'pass-and-play'
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const isImpostor = player.role === 'impostor';
-  
-  const displayRole = isImpostor ? 'IMPOSTOR' : 'CIUDADANO';
+  const isUndercover = player.role === 'undercover';
+  const isCitizen = player.role === 'citizen';
+
+  const displayRole = isImpostor ? 'IMPOSTOR' : isUndercover ? 'ENCUBIERTO' : 'CIUDADANO';
   const isSinglePlayer = revealMode === 'single-player';
 
   const handleReveal = (e: React.MouseEvent) => {
@@ -89,8 +91,10 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
 
         {/* --- BACK OF CARD (REVEALED) --- */}
         <div className={`absolute inset-0 backface-hidden w-full h-full rounded-3xl border-2 shadow-2xl flex flex-col items-center justify-between p-6 text-center rotate-y-180 bg-slate-900 cursor-default ${
-          isImpostor 
-            ? 'border-red-500 shadow-[0_0_50px_rgba(220,38,38,0.25)]' 
+          isImpostor
+            ? 'border-red-500 shadow-[0_0_50px_rgba(220,38,38,0.25)]'
+            : isUndercover
+            ? 'border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.25)]'
             : 'border-blue-500 shadow-[0_0_50px_rgba(37,99,235,0.25)]'
         }`}>
           <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -98,6 +102,10 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
                 {isImpostor ? (
                 <div className="w-28 h-28 bg-red-500/10 rounded-full flex items-center justify-center mx-auto text-red-500 border-2 border-red-500/30 animate-pulse">
                     <EyeOff size={56} />
+                </div>
+                ) : isUndercover ? (
+                <div className="w-28 h-28 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto text-yellow-500 border-2 border-yellow-500/30">
+                    <Drama size={56} />
                 </div>
                 ) : (
                 <div className="w-28 h-28 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto text-blue-500 border-2 border-blue-500/30">
@@ -107,7 +115,9 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
             </div>
 
             <h2 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">TU ROL ES</h2>
-            <h1 className={`text-4xl font-black mb-6 uppercase tracking-tight ${isImpostor ? 'text-red-500' : 'text-blue-500'}`}>
+            <h1 className={`text-4xl font-black mb-6 uppercase tracking-tight ${
+              isImpostor ? 'text-red-500' : isUndercover ? 'text-yellow-500' : 'text-blue-500'
+            }`}>
                 {displayRole}
             </h1>
 
@@ -119,6 +129,15 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
                     <div className="mt-4 bg-red-950/50 p-3 rounded-lg">
                         <p className="text-red-400 text-sm font-bold uppercase">Objetivo</p>
                         <p className="text-red-200 text-sm">Escuchá, deducí y mentí para que no te descubran.</p>
+                    </div>
+                </div>
+            ) : isUndercover ? (
+                <div className="bg-yellow-900/20 p-6 rounded-2xl border border-yellow-500/30 w-full">
+                    <p className="text-yellow-500 text-xs uppercase font-bold mb-2">Tu palabra es SIMILAR</p>
+                    <p className="text-3xl font-black text-white tracking-tight break-words mb-4 select-all">{player.word}</p>
+                    <div className="mt-2 bg-yellow-950/50 p-3 rounded-lg">
+                        <p className="text-yellow-400 text-xs font-bold uppercase">Objetivo</p>
+                        <p className="text-yellow-200 text-xs">Mezclate con los ciudadanos sin revelar tu palabra.</p>
                     </div>
                 </div>
             ) : (

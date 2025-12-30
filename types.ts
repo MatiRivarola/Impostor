@@ -21,6 +21,8 @@ export interface Player {
   role: Role;
   word?: string; // The word this player sees (if any)
   isDead: boolean;
+  avatar?: string; // Emoji for online mode
+  color?: string;  // Hex color for online mode
 }
 
 export type ScoreMap = Record<string, number>;
