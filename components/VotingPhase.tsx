@@ -70,7 +70,7 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
   }, [socket, myPlayerId]);
 
   const handleConfirmVote = () => {
-    if (!selectedSuspect || hasVoted) return;
+    if (!selectedSuspect) return;
     onVote(selectedSuspect);
     setHasVoted(true);
   };
@@ -119,12 +119,12 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
             return (
               <button
                 key={player.id}
-                onClick={() => !hasVoted && !isMe && setSelectedSuspect(player.id)}
-                disabled={hasVoted || isMe}
+                onClick={() => !isMe && setSelectedSuspect(player.id)}
+                disabled={isMe}
                 className={`relative flex items-center p-4 rounded-2xl border-2 transition-all group ${
                   isSelected
                     ? 'bg-red-900/20 border-red-500 shadow-lg scale-[1.02]'
-                    : hasVoted || isMe
+                    : isMe
                     ? 'bg-slate-800/50 border-slate-700/50 opacity-60 cursor-not-allowed'
                     : 'bg-slate-800 border-slate-700 hover:border-slate-500 cursor-pointer'
                 }`}
@@ -137,7 +137,7 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
                 )}
 
                 {/* Icono de selección */}
-                {isSelected && !hasVoted && (
+                {isSelected && (
                   <div className="absolute top-3 right-3">
                     <CheckCircle2 className="text-red-500" size={24} />
                   </div>
@@ -178,24 +178,25 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-950 via-slate-950/95 to-transparent z-20">
-        <div className="max-w-md mx-auto">
-          {hasVoted ? (
-            <div className="bg-green-900/20 border-2 border-green-500 rounded-2xl p-4 text-center">
-              <Check size={32} className="text-green-400 mx-auto mb-2" />
-              <p className="text-green-300 font-bold">Voto Registrado</p>
-              <p className="text-green-400/70 text-sm">Esperando a los demás...</p>
+        <div className="max-w-md mx-auto space-y-3">
+          {hasVoted && (
+            <div className="bg-green-900/20 border-2 border-green-500 rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <Check size={20} className="text-green-400" />
+                <p className="text-green-300 font-bold text-sm">Voto registrado</p>
+              </div>
+              <p className="text-green-400/70 text-xs mt-1">Podés cambiarlo si querés</p>
             </div>
-          ) : (
-            <Button
-              fullWidth
-              onClick={handleConfirmVote}
-              disabled={!selectedSuspect}
-              variant="danger"
-              className="text-xl py-4 flex items-center justify-center gap-2 font-black"
-            >
-              {selectedSuspect ? 'CONFIRMAR ELIMINACIÓN' : 'SELECCIONÁ UN JUGADOR'} <Skull size={24}/>
-            </Button>
           )}
+          <Button
+            fullWidth
+            onClick={handleConfirmVote}
+            disabled={!selectedSuspect}
+            variant="danger"
+            className="text-xl py-4 flex items-center justify-center gap-2 font-black"
+          >
+            {hasVoted ? 'CAMBIAR VOTO' : selectedSuspect ? 'CONFIRMAR ELIMINACIÓN' : 'SELECCIONÁ UN JUGADOR'} <Skull size={24}/>
+          </Button>
         </div>
       </div>
     </div>

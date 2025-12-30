@@ -57,7 +57,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Connection State Management
-  const [connectionState, setConnectionState] = useState<'initial' | 'connecting' | 'connected' | 'reconnecting' | 'failed'>('initial');
+  const [connectionState, setConnectionState] = useState<'initial' | 'connecting' | 'connected' | 'creating_room' | 'joining_room' | 'reconnecting' | 'failed'>('initial');
   const [connectionAttempts, setConnectionAttempts] = useState(0);
 
   // Game Configuration (for host only)
@@ -130,6 +130,19 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
 
     newSocket.on('error_msg', (msg: string) => {
         setErrorMsg(msg);
+        // Si falla la reconexión, limpiar sessionStorage y volver al menú
+        if (connectionState === 'reconnecting') {
+            sessionStorage.removeItem('current_room_code');
+            sessionStorage.removeItem('my_player_id');
+            setConnectionState('connected');
+            setIsInRoom(false);
+            setCurrentRoom(null);
+            setView('menu');
+        }
+        // Si falla crear/unirse, volver a connected
+        if (connectionState === 'creating_room' || connectionState === 'joining_room') {
+            setConnectionState('connected');
+        }
     });
 
     newSocket.on('room_joined', ({ room, playerId }: { room: RoomData, playerId: string }) => {
@@ -141,6 +154,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
         setMyPlayerId(playerId);
         setIsInRoom(true);
         setErrorMsg(null);
+        setConnectionState('connected'); // IMPORTANTE: Volver a connected después de room_joined
     });
 
     newSocket.on('room_updated', (updatedRoom: RoomData) => {
@@ -176,12 +190,26 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
 
   const handleCreate = () => {
     if (!playerName.trim() || !socket) return;
+    setConnectionState('creating_room');
+    setErrorMsg(null);
     socket.emit('create_room', { playerName });
   };
 
   const handleJoin = () => {
     if (!playerName.trim() || roomCode.length !== 4 || !socket) return;
+    setConnectionState('joining_room');
+    setErrorMsg(null);
     socket.emit('join_room', { code: roomCode.toUpperCase(), playerName });
+  };
+
+  const handleCancelReconnect = () => {
+    sessionStorage.removeItem('current_room_code');
+    sessionStorage.removeItem('my_player_id');
+    setConnectionState('connected');
+    setIsInRoom(false);
+    setCurrentRoom(null);
+    setView('menu');
+    setErrorMsg(null);
   };
 
   // NUEVO: El servidor ahora maneja TODA la lógica del juego
@@ -271,17 +299,66 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
     );
   }
 
+  // Estado: Armando sala
+  if (connectionState === 'creating_room') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-6 text-center animate-fade-in">
+        <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h2 className="text-2xl font-bold mb-2">Armando sala...</h2>
+        <p className="text-slate-400">Preparando todo para jugar</p>
+        <div className="flex gap-2 mt-4">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="w-3 h-3 bg-green-500 rounded-full animate-pulse"
+              style={{ animationDelay: `${i * 0.2}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Estado: Uniéndose a sala
+  if (connectionState === 'joining_room') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-6 text-center animate-fade-in">
+        <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h2 className="text-2xl font-bold mb-2">Uniéndose a la sala...</h2>
+        <p className="text-slate-400 mb-2">Código: <span className="font-mono font-bold text-white">{roomCode.toUpperCase()}</span></p>
+        <div className="flex gap-2 mt-4">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"
+              style={{ animationDelay: `${i * 0.2}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // Estado: Reconectando
   if (connectionState === 'reconnecting') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-6 text-center animate-fade-in">
         <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 className="text-2xl font-bold mb-2">Reconectando...</h2>
-        <p className="text-slate-400 mb-4">Intentando restablecer conexión</p>
-        {connectionAttempts > 0 && (
-          <p className="text-slate-500 text-sm">Intento {connectionAttempts}/5</p>
+        <h2 className="text-2xl font-bold mb-2">Reconectando a tu sala...</h2>
+        <p className="text-slate-400 mb-2">Intentando restablecer conexión</p>
+        {errorMsg && (
+          <div className="bg-red-900/20 border border-red-500/50 rounded-lg px-4 py-2 mt-4 max-w-md">
+            <p className="text-red-300 text-sm">{errorMsg}</p>
+          </div>
         )}
-        <Button onClick={onBack} variant="secondary" className="mt-6">Cancelar</Button>
+        <div className="flex gap-3 mt-6">
+          <Button onClick={handleCancelReconnect} variant="secondary">
+            Volver al Menú
+          </Button>
+          <Button onClick={() => window.location.reload()} variant="primary">
+            Reintentar
+          </Button>
+        </div>
       </div>
     );
   }
@@ -342,11 +419,12 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
       const isHost = myPlayerId === currentRoom.hostId;
       return (
           <div className="min-h-screen bg-slate-950 flex flex-col pt-4">
-              <DebatePhase 
-                timerDuration={180} 
+              <DebatePhase
+                timerDuration={180}
                 onTimerEnd={() => {
                     if (isHost) handleNextPhase('VOTING');
-                }} 
+                }}
+                players={currentRoom.players}
               />
               {!isHost && (
                 <div className="text-center p-4 text-slate-500 text-sm">

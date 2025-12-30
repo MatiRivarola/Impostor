@@ -1,15 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { AlertTriangle, FastForward, PlusCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { AlertTriangle, FastForward, PlusCircle, ArrowRight } from 'lucide-react';
 import { Button } from './Button';
+import { Player } from '../types';
+import { PlayerAvatar } from './PlayerAvatar';
 
 interface DebatePhaseProps {
   timerDuration: number;
   onTimerEnd: () => void;
+  players?: Player[];
 }
 
-export const DebatePhase: React.FC<DebatePhaseProps> = ({ timerDuration, onTimerEnd }) => {
+export const DebatePhase: React.FC<DebatePhaseProps> = ({ timerDuration, onTimerEnd, players }) => {
   const [timeLeft, setTimeLeft] = useState(timerDuration);
   const [isActive, setIsActive] = useState(true);
+
+  // Generar orden aleatorio de jugadores vivos (solo una vez)
+  const speakingOrder = useMemo(() => {
+    if (!players) return [];
+    const alivePlayers = players.filter(p => !p.isDead);
+    return [...alivePlayers].sort(() => Math.random() - 0.5);
+  }, [players]);
 
   // Request notification permission
   useEffect(() => {
@@ -57,6 +67,45 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({ timerDuration, onTimer
         <h1 className="text-3xl font-black text-white uppercase tracking-tight italic">¡A DISCUTIR!</h1>
         <p className="text-slate-400 text-sm">Sáquenle la ficha al que miente.</p>
       </div>
+
+      {/* Orden de turnos */}
+      {speakingOrder.length > 0 && (
+        <div className="w-full bg-slate-800/80 p-4 rounded-2xl border border-slate-700 mb-4 backdrop-blur-sm">
+          <div className="flex items-center gap-2 text-blue-400 mb-3">
+            <ArrowRight size={18} />
+            <h3 className="font-bold text-sm uppercase">Orden de Turnos</h3>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 justify-center">
+            {speakingOrder.map((player, index) => (
+              <div key={player.id} className="flex items-center gap-2">
+                <div className="flex flex-col items-center">
+                  <div className="relative">
+                    <PlayerAvatar
+                      avatar={player.avatar}
+                      color={player.color}
+                      isHost={false}
+                      size="sm"
+                      showCrown={false}
+                    />
+                    {index === 0 && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-slate-900">
+                        <span className="text-[10px] font-black text-white">1°</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium mt-1">{player.name}</span>
+                </div>
+                {index < speakingOrder.length - 1 && (
+                  <ArrowRight size={14} className="text-slate-600" />
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-slate-500 text-center mt-3">
+            <span className="font-bold text-green-400">{speakingOrder[0]?.name}</span> arranca la ronda
+          </p>
+        </div>
+      )}
 
       {/* Timer Container */}
       <div className="relative w-64 h-64 flex items-center justify-center mb-6">
