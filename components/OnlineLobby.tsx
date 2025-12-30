@@ -131,18 +131,22 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
     newSocket.on('error_msg', (msg: string) => {
         setErrorMsg(msg);
         // Si falla la reconexión, limpiar sessionStorage y volver al menú
-        if (connectionState === 'reconnecting') {
-            sessionStorage.removeItem('current_room_code');
-            sessionStorage.removeItem('my_player_id');
-            setConnectionState('connected');
-            setIsInRoom(false);
-            setCurrentRoom(null);
-            setView('menu');
-        }
-        // Si falla crear/unirse, volver a connected
-        if (connectionState === 'creating_room' || connectionState === 'joining_room') {
-            setConnectionState('connected');
-        }
+        // Usar callback para obtener el estado actual y evitar closure stale
+        setConnectionState((currentState) => {
+            if (currentState === 'reconnecting') {
+                sessionStorage.removeItem('current_room_code');
+                sessionStorage.removeItem('my_player_id');
+                setIsInRoom(false);
+                setCurrentRoom(null);
+                setView('menu');
+                return 'connected';
+            }
+            // Si falla crear/unirse, volver a connected
+            if (currentState === 'creating_room' || currentState === 'joining_room') {
+                return 'connected';
+            }
+            return currentState;
+        });
     });
 
     newSocket.on('room_joined', ({ room, playerId }: { room: RoomData, playerId: string }) => {
@@ -454,7 +458,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
       return (
           <EliminationPhase
             eliminationData={currentRoom.eliminationData}
-            onContinue={handleChangePhase('DEBATE')}
+            onContinue={() => handleNextPhase('DEBATE')}
           />
       );
   }
