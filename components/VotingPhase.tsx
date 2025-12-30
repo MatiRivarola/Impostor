@@ -144,16 +144,23 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
                 key={player.id}
                 onClick={() => !isMe && setSelectedSuspect(player.id)}
                 disabled={isMe}
-                className={`relative flex items-center p-4 rounded-2xl border-2 transition-all group ${
+                className={`relative flex items-center p-4 rounded-2xl border-2 transition-all duration-200 group ${
                   isSelected
-                    ? 'bg-red-900/20 border-red-500 shadow-lg scale-[1.02]'
+                    ? 'bg-red-900/30 border-red-500 shadow-2xl shadow-red-500/30 scale-105 ring-2 ring-red-500/50'
                     : isMe
                     ? 'bg-slate-800/50 border-slate-700/50 opacity-60 cursor-not-allowed'
-                    : 'bg-slate-800 border-slate-700 hover:border-slate-500 cursor-pointer'
+                    : 'bg-slate-800 border-slate-700 hover:border-slate-500 hover:scale-[1.02] cursor-pointer'
                 }`}
               >
+                {/* Banner "TU VOTO" si está seleccionado */}
+                {isSelected && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 px-3 py-1 rounded-full shadow-lg z-10">
+                    <span className="text-white font-black text-xs uppercase tracking-wider">TU VOTO</span>
+                  </div>
+                )}
+
                 {/* Checkmark si ya votó */}
-                {playerHasVoted && (
+                {playerHasVoted && !isSelected && (
                   <div className="absolute top-2 right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                     <Check size={14} className="text-white" />
                   </div>
@@ -161,8 +168,8 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
 
                 {/* Icono de selección */}
                 {isSelected && (
-                  <div className="absolute top-3 right-3">
-                    <CheckCircle2 className="text-red-500" size={24} />
+                  <div className="absolute top-2 right-2 animate-pulse">
+                    <CheckCircle2 className="text-red-400" size={28} />
                   </div>
                 )}
 

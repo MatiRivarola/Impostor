@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Copy, Share2, Users, Crown, LogIn, Plus, Play, RotateCcw, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft, Copy, Share2, Users, Crown, LogIn, Plus, Play, RotateCcw, AlertTriangle, Wifi, WifiOff, X } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { Button } from './Button';
 import { Player, Role, EliminationData } from '../types';
@@ -185,6 +185,19 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
         console.log(`La sala se cerrará en ${timeRemaining/1000}s. Razón: ${reason}`);
     });
 
+    newSocket.on('player_kicked', ({ message }) => {
+        // Limpiar sessionStorage
+        sessionStorage.removeItem('current_room_code');
+        sessionStorage.removeItem('my_player_id');
+
+        // Volver al menú
+        setIsInRoom(false);
+        setCurrentRoom(null);
+        setMyPlayerId('');
+        setView('menu');
+        setErrorMsg(message);
+    });
+
     // Cleanup
     return () => {
         newSocket.disconnect();
@@ -245,26 +258,39 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
     socket.emit('cast_vote', { code: currentRoom.code, votedPlayerId: victimId });
   };
 
+  const handleLeaveRoom = () => {
+    if (!currentRoom || !socket) return;
+
+    // Emitir evento para salir de la sala
+    socket.emit('leave_room', { code: currentRoom.code });
+
+    // Esperar confirmación del servidor
+    socket.once('room_left', () => {
+      // Limpiar sessionStorage
+      sessionStorage.removeItem('current_room_code');
+      sessionStorage.removeItem('my_player_id');
+
+      setIsInRoom(false);
+      setCurrentRoom(null);
+      setMyPlayerId('');
+      setView('menu');
+    });
+  };
+
   const handleExitRoom = () => {
-    // NUEVO: Limpiar sessionStorage
-    sessionStorage.removeItem('current_room_code');
-    sessionStorage.removeItem('my_player_id');
-
-    if(socket) socket.disconnect();
-    // Re-connect for menu
-    const newSocket = io(SERVER_URL);
-    setSocket(newSocket);
-
-    setIsInRoom(false);
-    setCurrentRoom(null);
-    setMyPlayerId('');
-    setView('menu');
+    // Solo para el host: volver al LOBBY (cambiar configuración)
+    handleLeaveRoom();
   };
 
   const handlePlayAgain = () => {
     if (!currentRoom || !socket) return;
     // El servidor reiniciará el juego
     socket.emit('reset_game', { code: currentRoom.code });
+  };
+
+  const handleKickPlayer = (playerId: string) => {
+    if (!currentRoom || !socket) return;
+    socket.emit('kick_player', { code: currentRoom.code, playerId });
   };
 
   // Utilities
@@ -426,7 +452,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
       return (
           <div className="min-h-screen bg-slate-950 flex flex-col pt-4">
               <DebatePhase
-                timerDuration={180}
+                timerDuration={currentRoom.debateTimeRemaining || 180}
                 onTimerEnd={() => {
                     if (isHost) handleNextPhase('VOTING');
                 }}
@@ -434,6 +460,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                 socket={socket}
                 roomCode={currentRoom.code}
                 serverTimeRemaining={currentRoom.debateTimeRemaining}
+                isHost={isHost}
               />
               {!isHost && (
                 <div className="text-center p-4 text-slate-500 text-sm">
@@ -473,13 +500,14 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
       const isHost = myPlayerId === currentRoom.hostId;
       return (
           <div className="min-h-screen bg-slate-950 flex flex-col pt-4">
-              <ResultPhase 
-                winner={currentRoom.winner || 'impostor'} 
-                players={currentRoom.players} 
-                secretWord={currentRoom.secretWord} 
-                scores={{}} 
-                onPlayAgain={isHost ? handlePlayAgain : () => {}} 
-                onChangeSetup={handleExitRoom} 
+              <ResultPhase
+                winner={currentRoom.winner || 'impostor'}
+                players={currentRoom.players}
+                secretWord={currentRoom.secretWord}
+                scores={{}}
+                onPlayAgain={handlePlayAgain}
+                onChangeSetup={isHost ? handleExitRoom : handleLeaveRoom}
+                isHost={isHost}
               />
               {!isHost && (
                   <div className="p-4 text-center text-slate-400 bg-slate-900">
@@ -687,20 +715,30 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 content-start">
                         {currentRoom.players.map((p, i) => (
-                            <div key={p.id} className="flex items-center gap-4 bg-slate-800 p-4 rounded-2xl border border-slate-700 animate-fade-in hover:border-slate-500 transition-colors">
+                            <div key={p.id} className="relative flex items-center gap-4 bg-slate-800 p-4 rounded-2xl border border-slate-700 animate-fade-in hover:border-slate-500 transition-colors">
                                 <PlayerAvatar
                                   avatar={p.avatar}
                                   color={p.color}
                                   isHost={p.id === currentRoom.hostId}
                                   size="lg"
                                 />
-                                <div className="flex flex-col">
+                                <div className="flex flex-col flex-1">
                                     <span className="font-bold text-white text-lg truncate flex items-center gap-2">
                                         {p.name}
                                         {p.id === myPlayerId && <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded-full border border-blue-700">VOS</span>}
                                     </span>
                                     {p.id === currentRoom.hostId && <span className="text-xs text-yellow-500 font-bold uppercase">Anfitrión</span>}
                                 </div>
+                                {/* Botón expulsar (solo visible para host y no en sí mismo) */}
+                                {isHost && p.id !== currentRoom.hostId && (
+                                  <button
+                                    onClick={() => handleKickPlayer(p.id)}
+                                    className="absolute top-2 right-2 w-7 h-7 bg-red-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors group"
+                                    title={`Expulsar a ${p.name}`}
+                                  >
+                                    <X size={16} className="group-hover:scale-110 transition-transform" />
+                                  </button>
+                                )}
                             </div>
                         ))}
                     </div>

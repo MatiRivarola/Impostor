@@ -25,6 +25,7 @@ interface ResultPhaseProps {
   scores: ScoreMap;
   onPlayAgain: () => void;
   onChangeSetup: () => void;
+  isHost?: boolean;
 }
 
 export const ResultPhase: React.FC<ResultPhaseProps> = ({
@@ -33,7 +34,8 @@ export const ResultPhase: React.FC<ResultPhaseProps> = ({
   secretWord,
   scores,
   onPlayAgain,
-  onChangeSetup
+  onChangeSetup,
+  isHost = true
 }) => {
   const isImpostorWin = winner === 'impostor';
   const impostors = players.filter(p => p.role === 'impostor');
@@ -107,12 +109,25 @@ export const ResultPhase: React.FC<ResultPhaseProps> = ({
       </div>
 
       <div className="w-full max-w-sm space-y-3">
-        <Button onClick={onPlayAgain} fullWidth variant="primary" className="flex items-center justify-center gap-2">
-          <RotateCcw size={20} /> Jugar otra ronda
-        </Button>
-        <Button onClick={onChangeSetup} fullWidth variant="secondary" className="flex items-center justify-center gap-2">
-          <Settings size={20} /> Cambiar configuración
-        </Button>
+        {isHost ? (
+          <>
+            <Button onClick={onPlayAgain} fullWidth variant="primary" className="flex items-center justify-center gap-2">
+              <RotateCcw size={20} /> Jugar otra ronda
+            </Button>
+            <Button onClick={onChangeSetup} fullWidth variant="secondary" className="flex items-center justify-center gap-2">
+              <Settings size={20} /> Cambiar configuración
+            </Button>
+          </>
+        ) : (
+          <>
+            <div className="bg-blue-900/20 border border-blue-500/50 rounded-lg p-3 text-center">
+              <p className="text-blue-300 text-sm">Esperando al anfitrión...</p>
+            </div>
+            <Button onClick={onChangeSetup} fullWidth variant="secondary" className="flex items-center justify-center gap-2">
+              <Settings size={20} /> Salir de la Sala
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

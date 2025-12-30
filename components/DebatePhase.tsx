@@ -11,6 +11,7 @@ interface DebatePhaseProps {
   socket?: any;
   roomCode?: string;
   serverTimeRemaining?: number;
+  isHost?: boolean;
 }
 
 export const DebatePhase: React.FC<DebatePhaseProps> = ({
@@ -19,7 +20,8 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({
   players,
   socket,
   roomCode,
-  serverTimeRemaining
+  serverTimeRemaining,
+  isHost = false
 }) => {
   // Usar tiempo del servidor si está disponible, sino usar el local
   const [timeLeft, setTimeLeft] = useState(serverTimeRemaining || timerDuration);
@@ -194,12 +196,14 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({
             <span className={`text-6xl font-black font-mono tracking-tighter ${timeLeft < 60 ? 'text-red-400' : 'text-white'}`}>
             {formattedTime}
             </span>
-            <button 
-                onClick={addMinute}
-                className="mt-2 flex items-center gap-1 text-xs font-bold uppercase bg-slate-800 hover:bg-slate-700 text-blue-400 px-3 py-1 rounded-full transition-colors border border-slate-700"
-            >
-                <PlusCircle size={14} /> 1 Min
-            </button>
+            {isHost && (
+              <button
+                  onClick={addMinute}
+                  className="mt-2 flex items-center gap-1 text-xs font-bold uppercase bg-slate-800 hover:bg-slate-700 text-blue-400 px-3 py-1 rounded-full transition-colors border border-slate-700"
+              >
+                  <PlusCircle size={14} /> 1 Min
+              </button>
+            )}
         </div>
       </div>
 
