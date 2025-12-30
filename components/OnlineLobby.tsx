@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Copy, Share2, Users, Crown, LogIn, Plus, Play, RotateCcw, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Copy, Share2, Users, Crown, LogIn, Plus, Play, RotateCcw, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
 import { Button } from './Button';
 import { Player, Role } from '../types';
 import { AssignmentPhase } from './AssignmentPhase';
@@ -7,6 +8,10 @@ import { DebatePhase } from './DebatePhase';
 import { VotingPhase } from './VotingPhase';
 import { ResultPhase } from './ResultPhase';
 import { getGameWords } from '../services/wordService';
+
+// --- CONFIGURATION ---
+// URL del servidor Socket.IO (desde variable de entorno)
+const SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001'; 
 
 interface OnlineLobbyProps {
   onBack: () => void;
@@ -21,7 +26,6 @@ interface RoomData {
   players: Player[];
   secretWord: string;
   winner: 'citizens' | 'impostor' | null;
-  updatedAt: number;
 }
 
 export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
@@ -31,180 +35,140 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
   const [playerName, setPlayerName] = useState('');
   
   // Lobby State
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  
   const [isInRoom, setIsInRoom] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<RoomData | null>(null);
   const [myPlayerId, setMyPlayerId] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Polling Interval Ref
-  const pollRef = useRef<number | null>(null);
-
-  // --- LOCAL STORAGE "BACKEND" LOGIC ---
+  // --- WEBSOCKET CONNECTION ---
   
-  const getRoom = (code: string): RoomData | null => {
-    const data = localStorage.getItem(`IMPOSTOR_ROOM_${code}`);
-    return data ? JSON.parse(data) : null;
-  };
-
-  const saveRoom = (data: RoomData) => {
-    data.updatedAt = Date.now();
-    localStorage.setItem(`IMPOSTOR_ROOM_${data.code}`, JSON.stringify(data));
-    setCurrentRoom(data);
-  };
-
-  // --- POLLING FOR UPDATES ---
   useEffect(() => {
-    if (isInRoom && currentRoom?.code) {
-      pollRef.current = window.setInterval(() => {
-        const serverRoom = getRoom(currentRoom.code);
-        
-        if (!serverRoom) {
-          // Room deleted or invalid
-          handleExitRoom();
-          setErrorMsg("La sala fue cerrada.");
-          return;
-        }
+    // 1. Initialize Socket con opciones de reconexión
+    const newSocket = io(SERVER_URL, {
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
+    });
+    setSocket(newSocket);
 
-        // Check if data changed by comparing timestamps or simple JSON stringify
-        if (serverRoom.updatedAt !== currentRoom.updatedAt) {
-          setCurrentRoom(serverRoom);
-        }
-      }, 500); // Check every 500ms
-    }
+    // 2. Event Listeners
+    newSocket.on('connect', () => {
+        setIsConnected(true);
+        console.log("Conectado al servidor WS:", newSocket.id);
 
+        // NUEVO: Reconectar a sala si estábamos en una
+        const savedRoom = sessionStorage.getItem('current_room_code');
+        const savedPlayerId = sessionStorage.getItem('my_player_id');
+
+        if (savedRoom && savedPlayerId) {
+            console.log("Intentando reconexión a sala", savedRoom);
+            newSocket.emit('reconnect_player', {
+                code: savedRoom,
+                playerId: savedPlayerId
+            });
+        }
+    });
+
+    newSocket.on('disconnect', (reason) => {
+        setIsConnected(false);
+        if (reason === 'io server disconnect') {
+            setErrorMsg("El servidor cerró la conexión.");
+        } else {
+            setErrorMsg("Conexión perdida. Reintentando...");
+        }
+    });
+
+    newSocket.on('error_msg', (msg: string) => {
+        setErrorMsg(msg);
+    });
+
+    newSocket.on('room_joined', ({ room, playerId }: { room: RoomData, playerId: string }) => {
+        // NUEVO: Guardar en sessionStorage para reconexión
+        sessionStorage.setItem('current_room_code', room.code);
+        sessionStorage.setItem('my_player_id', playerId);
+
+        setCurrentRoom(room);
+        setMyPlayerId(playerId);
+        setIsInRoom(true);
+        setErrorMsg(null);
+    });
+
+    newSocket.on('room_updated', (updatedRoom: RoomData) => {
+        setCurrentRoom(updatedRoom);
+    });
+
+    // NUEVO: Listeners para desconexión/reconexión de jugadores
+    newSocket.on('player_disconnected', ({ playerId, playerName, timeWindow }) => {
+        console.log(`${playerName} se desconectó. Puede reconectar en ${timeWindow/1000}s`);
+    });
+
+    newSocket.on('player_reconnected', ({ playerId, playerName }) => {
+        console.log(`${playerName} se reconectó`);
+    });
+
+    newSocket.on('host_transferred', ({ newHostId, newHostName, message }) => {
+        console.log(message);
+        // Opcional: Mostrar modal o toast
+    });
+
+    newSocket.on('room_closing', ({ reason, timeRemaining }) => {
+        console.log(`La sala se cerrará en ${timeRemaining/1000}s. Razón: ${reason}`);
+    });
+
+    // Cleanup
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+        newSocket.disconnect();
     };
-  }, [isInRoom, currentRoom?.code, currentRoom?.updatedAt]);
+  }, []);
 
 
-  // --- ACTIONS ---
+  // --- ACTIONS (Emitting Events) ---
 
   const handleCreate = () => {
-    if (!playerName.trim()) return;
-    
-    const newCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const hostId = `host-${Date.now()}`;
-    
-    const newRoom: RoomData = {
-      code: newCode,
-      hostId: hostId,
-      phase: 'LOBBY',
-      players: [{ 
-        id: hostId, 
-        name: playerName, 
-        role: 'citizen', 
-        isDead: false 
-      }],
-      secretWord: '',
-      winner: null,
-      updatedAt: Date.now()
-    };
-
-    saveRoom(newRoom);
-    setMyPlayerId(hostId);
-    setCurrentRoom(newRoom);
-    setIsInRoom(true);
+    if (!playerName.trim() || !socket) return;
+    socket.emit('create_room', { playerName });
   };
 
   const handleJoin = () => {
-    if (!playerName.trim() || roomCode.length !== 4) return;
-    
-    const room = getRoom(roomCode.toUpperCase());
-    
-    if (!room) {
-      setErrorMsg("Sala no encontrada. Verificá el código.");
-      return;
-    }
-
-    if (room.phase !== 'LOBBY') {
-        setErrorMsg("La partida ya comenzó.");
-        return;
-    }
-
-    if (room.players.some(p => p.name.toLowerCase() === playerName.toLowerCase())) {
-        setErrorMsg("Ese nombre ya está en uso en esta sala.");
-        return;
-    }
-
-    const playerId = `p-${Date.now()}`;
-    const newPlayer: Player = {
-        id: playerId,
-        name: playerName,
-        role: 'citizen',
-        isDead: false
-    };
-
-    room.players.push(newPlayer);
-    saveRoom(room); // Update DB
-    
-    setMyPlayerId(playerId);
-    setCurrentRoom(room);
-    setIsInRoom(true);
-    setErrorMsg(null);
+    if (!playerName.trim() || roomCode.length !== 4 || !socket) return;
+    socket.emit('join_room', { code: roomCode.toUpperCase(), playerName });
   };
 
+  // NUEVO: El servidor ahora maneja TODA la lógica del juego
+  // El cliente solo emite intenciones, el servidor valida y ejecuta
+
   const handleStartGame = () => {
-    if (!currentRoom) return;
-
-    // 1. Setup Game Data
-    const { secretWord: word } = getGameWords(['argentina', 'cordoba']);
-    
-    // 2. Assign Roles
-    const newPlayers = [...currentRoom.players];
-    const impostorIndex = Math.floor(Math.random() * newPlayers.length);
-    
-    newPlayers.forEach((p, index) => {
-        p.isDead = false;
-        if (index === impostorIndex) {
-            p.role = 'impostor';
-            p.word = undefined;
-        } else {
-            p.role = 'citizen';
-            p.word = word;
-        }
-    });
-
-    const updatedRoom: RoomData = {
-        ...currentRoom,
-        secretWord: word,
-        players: newPlayers,
-        phase: 'ASSIGNMENT'
-    };
-
-    saveRoom(updatedRoom);
+    if (!currentRoom || !socket) return;
+    // El servidor asignará roles y palabra
+    socket.emit('start_game', { code: currentRoom.code });
   };
 
   const handleNextPhase = (nextPhase: OnlinePhase) => {
-    if (!currentRoom) return;
-    saveRoom({ ...currentRoom, phase: nextPhase });
+    if (!currentRoom || !socket) return;
+    socket.emit('change_phase', { code: currentRoom.code, nextPhase });
   };
 
   const handleVote = (victimId: string) => {
-    if (!currentRoom) return;
-    
-    // Logic: In this simple implementation, ANY vote kills immediately (Chaos mode style)
-    // Or we could implement vote counting, but let's keep it snappy for the demo.
-    
-    const victim = currentRoom.players.find(p => p.id === victimId);
-    if (!victim) return;
-
-    let winner: 'citizens' | 'impostor' = 'impostor';
-    
-    if (victim.role === 'impostor') {
-        winner = 'citizens';
-    } else {
-        winner = 'impostor';
-    }
-
-    saveRoom({
-        ...currentRoom,
-        winner: winner,
-        phase: 'RESULT'
-    });
+    if (!currentRoom || !socket) return;
+    // El servidor validará el voto y calculará el resultado
+    socket.emit('cast_vote', { code: currentRoom.code, votedPlayerId: victimId });
   };
 
   const handleExitRoom = () => {
+    // NUEVO: Limpiar sessionStorage
+    sessionStorage.removeItem('current_room_code');
+    sessionStorage.removeItem('my_player_id');
+
+    if(socket) socket.disconnect();
+    // Re-connect for menu
+    const newSocket = io(SERVER_URL);
+    setSocket(newSocket);
+
     setIsInRoom(false);
     setCurrentRoom(null);
     setMyPlayerId('');
@@ -212,14 +176,9 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
   };
 
   const handlePlayAgain = () => {
-    if (!currentRoom) return;
-    saveRoom({
-        ...currentRoom,
-        phase: 'LOBBY',
-        players: currentRoom.players.map(p => ({ ...p, role: 'citizen', isDead: false, word: undefined })),
-        winner: null,
-        secretWord: ''
-    });
+    if (!currentRoom || !socket) return;
+    // El servidor reiniciará el juego
+    socket.emit('reset_game', { code: currentRoom.code });
   };
 
   // Utilities
@@ -238,37 +197,44 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
 
   // --- RENDER PHASES ---
 
+  if (!isConnected) {
+    return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-6 text-center animate-fade-in">
+            <WifiOff size={48} className="text-red-500 mb-4 animate-pulse" />
+            <h2 className="text-2xl font-bold mb-2">Conectando al servidor...</h2>
+            <p className="text-slate-400 mb-6">Asegurate de que el backend esté corriendo en <span className="font-mono bg-slate-900 px-2 py-1 rounded">{SERVER_URL}</span></p>
+            <Button onClick={onBack} variant="secondary">Volver al Inicio</Button>
+        </div>
+    );
+  }
+
   // 1. ASSIGNMENT (Single Player View)
   if (isInRoom && currentRoom?.phase === 'ASSIGNMENT') {
       const myPlayer = currentRoom.players.find(p => p.id === myPlayerId);
       
-      // Safety check if player disconnects or logic fails
-      if (!myPlayer) return <div className="p-10 text-center text-white">Error: Jugador no encontrado</div>;
+      // Handle edge case if player data is missing locally
+      if (!myPlayer) return <div className="p-10 text-center text-white">Cargando datos del jugador...</div>;
 
       return (
           <div className="min-h-screen bg-slate-950 flex flex-col pt-8">
               <AssignmentPhase 
                 player={myPlayer} 
                 onNext={() => {
-                    // Only the Host can advance the global phase, but individual players just wait
-                    // For simplicity in this sync-model:
-                    // If I am host, I show a button "Start Debate"
-                    // If I am guest, I show "Waiting for host..."
+                    // Waiting state logic is handled by UI below
                 }} 
                 revealMode="single-player" 
               />
               
               {/* Sync Control for Host */}
-              {myPlayerId === currentRoom.hostId && (
+              {myPlayerId === currentRoom.hostId ? (
                   <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/90 border-t border-slate-800 z-50">
                       <Button onClick={() => handleNextPhase('DEBATE')} fullWidth variant="primary">
                          INICIAR DEBATE (Todos listos)
                       </Button>
                   </div>
-              )}
-               {myPlayerId !== currentRoom.hostId && (
-                  <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/90 border-t border-slate-800 z-50 text-center text-slate-400 animate-pulse">
-                      Esperando al anfitrión...
+              ) : (
+                  <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/90 border-t border-slate-800 z-50 text-center">
+                      <p className="text-slate-400 animate-pulse text-sm font-bold uppercase tracking-wider">Esperando al anfitrión...</p>
                   </div>
               )}
           </div>
@@ -340,6 +306,12 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                 <ArrowLeft size={20} />
             </button>
 
+            {/* Connection Status Indicator */}
+            <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
+                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                 <span className="text-[10px] text-green-500 font-bold uppercase">Online</span>
+            </div>
+
             {/* Content Wrapper */}
             <div className="flex-1 flex flex-col md:flex-row items-center md:items-start md:justify-center max-w-6xl mx-auto w-full gap-6 md:gap-12 mt-16 md:mt-24">
                 
@@ -374,14 +346,6 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                         <Button onClick={shareCode} variant="ghost" fullWidth className="flex items-center justify-center gap-2 border border-slate-700">
                             <Share2 size={18} /> Invitar Amigos
                         </Button>
-                    </div>
-
-                     {/* Local Sync Warning */}
-                    <div className="bg-yellow-900/20 border border-yellow-500/30 p-3 rounded-lg flex items-start gap-2">
-                        <AlertTriangle className="text-yellow-500 shrink-0 mt-0.5" size={16} />
-                        <p className="text-[10px] text-yellow-200/80 leading-tight">
-                            <strong>Nota Demo:</strong> Esta sala funciona sincronizada entre pestañas de este mismo navegador. Abrí otra pestaña para probarlo.
-                        </p>
                     </div>
                 </div>
 
