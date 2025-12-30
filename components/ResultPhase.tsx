@@ -1,7 +1,22 @@
 import React from 'react';
-import { RotateCcw, Settings, Trophy } from 'lucide-react';
+import { RotateCcw, Settings, Trophy, Skull } from 'lucide-react';
 import { Button } from './Button';
 import { Player, ScoreMap } from '../types';
+
+const VICTORY_PHRASES = {
+  citizens: [
+    "¡La pegaron! Ganaron los ciudadanos",
+    "¡Qué equipo! Los ciudadanos se llevaron la victoria",
+    "¡Chau impostor! Los buenos ganaron",
+    "¡Victoria épica de los ciudadanos!",
+  ],
+  impostor: [
+    "¡Los engañó a todos! Ganó el impostor",
+    "¡Qué actor! El impostor se los fumó",
+    "¡Tremendo! El impostor los hizo pelota",
+    "¡Impostor campeón! Los ciudadanos se fueron al muere",
+  ],
+};
 
 interface ResultPhaseProps {
   winner: 'citizens' | 'impostor';
@@ -12,17 +27,20 @@ interface ResultPhaseProps {
   onChangeSetup: () => void;
 }
 
-export const ResultPhase: React.FC<ResultPhaseProps> = ({ 
-  winner, 
-  players, 
+export const ResultPhase: React.FC<ResultPhaseProps> = ({
+  winner,
+  players,
   secretWord,
   scores,
-  onPlayAgain, 
-  onChangeSetup 
+  onPlayAgain,
+  onChangeSetup
 }) => {
   const isImpostorWin = winner === 'impostor';
   const impostors = players.filter(p => p.role === 'impostor');
   const undercovers = players.filter(p => p.role === 'undercover');
+
+  const phrases = VICTORY_PHRASES[winner];
+  const victoryPhrase = phrases[Math.floor(Math.random() * phrases.length)];
   
   const getPointsEarned = (role: string) => {
     if (winner === 'citizens') {
@@ -44,9 +62,8 @@ export const ResultPhase: React.FC<ResultPhaseProps> = ({
         )}
       </div>
 
-      <h2 className="text-xl text-slate-400 font-semibold tracking-widest uppercase mb-2">Victoria de</h2>
-      <h1 className={`text-5xl font-black mb-8 leading-tight ${isImpostorWin ? 'text-red-500' : 'text-blue-500'}`}>
-        {isImpostorWin ? 'IMPOSTORES' : 'CIUDADANOS'}
+      <h1 className={`text-4xl font-black mb-8 leading-tight ${isImpostorWin ? 'text-red-500' : 'text-blue-500'}`}>
+        {victoryPhrase}
       </h1>
 
       <div className="w-full max-w-md bg-slate-800 rounded-2xl p-6 border border-slate-700 mb-8 space-y-4">

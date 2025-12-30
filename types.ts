@@ -5,15 +5,25 @@ export type GameMode = 'classic' | 'chaos' | 'hardcore';
 
 export type AppMode = 'LANDING' | 'LOCAL' | 'ONLINE_LOBBY' | 'ONLINE_GAME';
 
-export type GamePhase = 
-  | 'SETUP' 
+export type GamePhase =
+  | 'SETUP'
   | 'LOADING'
   | 'ASSIGNMENT_WAIT' // "Pass phone to X"
   | 'ASSIGNMENT_REVEAL' // Showing the role
-  | 'DEBATE' 
-  | 'VOTING' 
+  | 'DEBATE'
+  | 'VOTING'
   | 'LAST_BULLET' // Hardcore mode only: Impostor guesses word
   | 'GAME_OVER';
+
+export type OnlinePhase = 'LOBBY' | 'ASSIGNMENT' | 'DEBATE' | 'VOTING' | 'ELIMINATION' | 'RESULT';
+
+export interface EliminationData {
+  victimId: string;
+  victimName: string;
+  victimRole: Role;
+  victimAvatar?: string;
+  victimColor?: string;
+}
 
 export interface Player {
   id: string;

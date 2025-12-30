@@ -11,6 +11,13 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({ timerDuration, onTimer
   const [timeLeft, setTimeLeft] = useState(timerDuration);
   const [isActive, setIsActive] = useState(true);
 
+  // Request notification permission
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (isActive && timeLeft > 0) {
@@ -19,6 +26,13 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({ timerDuration, onTimer
       }, 1000);
     } else if (timeLeft === 0) {
       setIsActive(false);
+      // Send notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification("¡Tiempo cumplido!", {
+            body: "El debate ha terminado. Es hora de votar.",
+            icon: "/icon-192.png" // Using the PWA icon
+        });
+      }
     }
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);

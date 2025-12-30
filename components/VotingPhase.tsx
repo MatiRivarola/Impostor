@@ -40,6 +40,7 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
   });
 
   const livingPlayers = players.filter(p => !p.isDead);
+  const amIDead = players.find(p => p.id === myPlayerId)?.isDead || false;
 
   useEffect(() => {
     if (!socket) return;
@@ -82,11 +83,22 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
     return votingState.votes.some(v => v.voterId === playerId);
   };
 
+  if (amIDead) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white px-4 text-center">
+        <Skull size={64} className="text-red-500 mb-6 animate-pulse" />
+        <h1 className="text-4xl font-black mb-2 uppercase text-red-400">ESTÁS MUERTO</h1>
+        <p className="text-slate-400 text-lg mb-6">No podés votar.</p>
+        <p className="text-slate-500 text-sm">Esperá hasta que se encuentre al impostor...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full animate-fade-in pb-24 pt-4 px-2 w-full max-w-4xl mx-auto">
       <div className="text-center mb-6">
-        <h1 className="text-4xl font-black text-white mb-2 uppercase italic">Votación</h1>
-        <p className="text-slate-400 text-sm">¿Quién es el impostor?</p>
+        <h1 className="text-4xl font-black text-white mb-2 uppercase italic">¿Quién es el gil?</h1>
+        <p className="text-slate-400 text-sm">Votá al sospechoso</p>
 
         {/* Contador de votos */}
         <div className="mt-4 inline-flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-full">

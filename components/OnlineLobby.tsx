@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Copy, Share2, Users, Crown, LogIn, Plus, Play, RotateCcw, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { Button } from './Button';
-import { Player, Role } from '../types';
+import { Player, Role, EliminationData } from '../types';
 import { AssignmentPhase } from './AssignmentPhase';
 import { DebatePhase } from './DebatePhase';
 import { VotingPhase } from './VotingPhase';
+import { EliminationPhase } from './EliminationPhase';
 import { ResultPhase } from './ResultPhase';
 import { PlayerAvatar } from './PlayerAvatar';
 import { getGameWords } from '../services/wordService';
@@ -19,7 +20,7 @@ interface OnlineLobbyProps {
   onBack: () => void;
 }
 
-type OnlinePhase = 'LOBBY' | 'ASSIGNMENT' | 'DEBATE' | 'VOTING' | 'RESULT';
+type OnlinePhase = 'LOBBY' | 'ASSIGNMENT' | 'DEBATE' | 'VOTING' | 'ELIMINATION' | 'RESULT';
 
 interface GameConfig {
   themes: string[];
@@ -37,6 +38,7 @@ interface RoomData {
   undercoverWord: string;
   winner: 'citizens' | 'impostor' | null;
   gameConfig?: GameConfig;
+  eliminationData?: EliminationData;
 }
 
 export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
@@ -366,6 +368,16 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                 socket={socket}
               />
           </div>
+      );
+  }
+
+  // 3.5. ELIMINATION
+  if (isInRoom && currentRoom?.phase === 'ELIMINATION' && currentRoom.eliminationData) {
+      return (
+          <EliminationPhase
+            eliminationData={currentRoom.eliminationData}
+            onContinue={handleChangePhase('DEBATE')}
+          />
       );
   }
 

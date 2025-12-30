@@ -115,6 +115,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
           <input
             type="text"
             placeholder="Nombre..."
+            aria-label="Nombre del jugador"
             value={currentName}
             onChange={(e) => setCurrentName(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -123,6 +124,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
           <button 
             onClick={addPlayer}
             disabled={!currentName.trim()}
+            aria-label="Agregar jugador"
             className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white p-3 rounded-xl transition-colors shadow-lg shadow-blue-900/30"
           >
             <Plus size={24} />
@@ -134,7 +136,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
             {names.map((name, index) => (
                 <div key={index} className="flex items-center gap-2 bg-slate-700 text-white px-3 py-1.5 rounded-lg text-sm border border-slate-600 shadow-sm animate-fade-in">
                 <span>{name}</span>
-                <button onClick={() => removePlayer(index)} className="text-slate-400 hover:text-red-400">
+                <button onClick={() => removePlayer(index)} aria-label={`Eliminar a ${name}`} className="text-slate-400 hover:text-red-400">
                     <X size={14} />
                 </button>
                 </div>
@@ -208,6 +210,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
                 <div className="flex items-center justify-between bg-slate-900/80 rounded-lg p-1 border border-slate-700">
                     <button 
                         onClick={() => setImpostorCount(Math.max(1, impostorCount - 1))} 
+                        aria-label="Disminuir cantidad de impostores"
                         className="w-8 h-8 flex items-center justify-center rounded bg-slate-800 text-white hover:bg-slate-700 border border-slate-600"
                     >
                         <Minus size={14} />
@@ -215,6 +218,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
                     <span className="font-bold text-white text-lg">{impostorCount}</span>
                     <button 
                         onClick={() => setImpostorCount(Math.min(Math.floor(names.length / 2), impostorCount + 1))} 
+                        aria-label="Aumentar cantidad de impostores"
                         className="w-8 h-8 flex items-center justify-center rounded bg-slate-800 text-white hover:bg-slate-700 border border-slate-600"
                     >
                         <Plus size={14} />
@@ -229,6 +233,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
                     <div className="flex items-center justify-between bg-slate-900/80 rounded-lg p-1 border border-slate-700">
                         <button 
                             onClick={() => setUndercoverCount(Math.max(0, undercoverCount - 1))} 
+                            aria-label="Disminuir cantidad de encubiertos"
                             className="w-8 h-8 flex items-center justify-center rounded bg-slate-800 text-white hover:bg-slate-700 border border-slate-600"
                         >
                             <Minus size={14} />
@@ -236,6 +241,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
                         <span className="font-bold text-white text-lg">{undercoverCount}</span>
                         <button 
                             onClick={() => setUndercoverCount(Math.min(Math.max(0, names.length - impostorCount - 1), undercoverCount + 1))} 
+                            aria-label="Aumentar cantidad de encubiertos"
                             className="w-8 h-8 flex items-center justify-center rounded bg-slate-800 text-white hover:bg-slate-700 border border-slate-600"
                         >
                             <Plus size={14} />

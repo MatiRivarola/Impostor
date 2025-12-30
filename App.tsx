@@ -9,6 +9,7 @@ import { LastBulletPhase } from './components/LastBulletPhase';
 import { Scoreboard } from './components/Scoreboard';
 import { LandingPhase } from './components/LandingPhase';
 import { OnlineLobby } from './components/OnlineLobby';
+import { ReloadPrompt } from './components/ReloadPrompt';
 import { getGameWords } from './services/wordService';
 import { THEMES } from './constants';
 import { Button } from './components/Button';
@@ -331,6 +332,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-hidden relative">
+      <ReloadPrompt />
       
       {/* FLOATING SCOREBOARD */}
       {!isAssignmentPhase && (
