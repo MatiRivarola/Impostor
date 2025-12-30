@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Skull, CheckCircle2, Check } from 'lucide-react';
+import { Skull, CheckCircle2, Check, AlertTriangle } from 'lucide-react';
 import { Button } from './Button';
 import { Player } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
@@ -38,6 +38,7 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
     totalVoters: 0,
     voteCount: 0,
   });
+  const [tieMessage, setTieMessage] = useState<string | null>(null);
 
   const livingPlayers = players.filter(p => !p.isDead);
   const amIDead = players.find(p => p.id === myPlayerId)?.isDead || false;
@@ -57,15 +58,27 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
       if (myVote) {
         setHasVoted(true);
         setSelectedSuspect(myVote.votedPlayerId);
+      } else {
+        // Si resetean los votos (empate), resetear estado local
+        setHasVoted(false);
+        setSelectedSuspect(null);
       }
+    };
+
+    const handleVoteTie = ({ message }: { tiedPlayers: string[]; message: string }) => {
+      setTieMessage(message);
+      // Limpiar mensaje después de 5 segundos
+      setTimeout(() => setTieMessage(null), 5000);
     };
 
     socket.on('vote_cast', handleVoteCast);
     socket.on('voting_state', handleVotingState);
+    socket.on('vote_tie', handleVoteTie);
 
     return () => {
       socket.off('vote_cast', handleVoteCast);
       socket.off('voting_state', handleVotingState);
+      socket.off('vote_tie', handleVoteTie);
     };
   }, [socket, myPlayerId]);
 
@@ -106,6 +119,16 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
           <span className="text-white font-bold">{votingState.voteCount}/{votingState.totalVoters}</span>
           <span className="text-slate-400 text-sm">jugadores votaron</span>
         </div>
+
+        {/* Mensaje de Empate */}
+        {tieMessage && (
+          <div className="mt-4 bg-yellow-900/30 border-2 border-yellow-500 rounded-xl p-4 animate-pulse">
+            <div className="flex items-center justify-center gap-2">
+              <AlertTriangle size={24} className="text-yellow-400" />
+              <p className="text-yellow-200 font-bold text-lg uppercase">{tieMessage}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto pr-1">

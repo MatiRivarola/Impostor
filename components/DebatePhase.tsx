@@ -8,10 +8,21 @@ interface DebatePhaseProps {
   timerDuration: number;
   onTimerEnd: () => void;
   players?: Player[];
+  socket?: any;
+  roomCode?: string;
+  serverTimeRemaining?: number;
 }
 
-export const DebatePhase: React.FC<DebatePhaseProps> = ({ timerDuration, onTimerEnd, players }) => {
-  const [timeLeft, setTimeLeft] = useState(timerDuration);
+export const DebatePhase: React.FC<DebatePhaseProps> = ({
+  timerDuration,
+  onTimerEnd,
+  players,
+  socket,
+  roomCode,
+  serverTimeRemaining
+}) => {
+  // Usar tiempo del servidor si está disponible, sino usar el local
+  const [timeLeft, setTimeLeft] = useState(serverTimeRemaining || timerDuration);
   const [isActive, setIsActive] = useState(true);
 
   // Generar orden aleatorio de jugadores vivos (solo una vez)
@@ -21,6 +32,45 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({ timerDuration, onTimer
     return [...alivePlayers].sort(() => Math.random() - 0.5);
   }, [players]);
 
+  // Sincronizar tiempo desde el servidor
+  useEffect(() => {
+    if (serverTimeRemaining !== undefined) {
+      setTimeLeft(serverTimeRemaining);
+    }
+  }, [serverTimeRemaining]);
+
+  // Escuchar actualizaciones del timer desde el servidor
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleTimerUpdate = ({ timeRemaining }: { timeRemaining: number }) => {
+      setTimeLeft(timeRemaining);
+      if (timeRemaining === 0) {
+        setIsActive(false);
+        // Send notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification("¡Tiempo cumplido!", {
+            body: "El debate ha terminado. El impostor gana.",
+            icon: "/icon-192.png"
+          });
+        }
+      }
+    };
+
+    const handleTimerExpired = ({ message }: { message: string }) => {
+      console.log(message);
+      // El servidor ya cambió la fase a RESULT, el componente se desmontará
+    };
+
+    socket.on('timer_update', handleTimerUpdate);
+    socket.on('timer_expired', handleTimerExpired);
+
+    return () => {
+      socket.off('timer_update', handleTimerUpdate);
+      socket.off('timer_expired', handleTimerExpired);
+    };
+  }, [socket]);
+
   // Request notification permission
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -28,7 +78,10 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({ timerDuration, onTimer
     }
   }, []);
 
+  // Timer local de fallback (solo si no hay socket)
   useEffect(() => {
+    if (socket) return; // Si hay socket, usar timer del servidor
+
     let interval: ReturnType<typeof setInterval>;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
@@ -40,16 +93,22 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({ timerDuration, onTimer
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification("¡Tiempo cumplido!", {
             body: "El debate ha terminado. Es hora de votar.",
-            icon: "/icon-192.png" // Using the PWA icon
+            icon: "/icon-192.png"
         });
       }
     }
     return () => clearInterval(interval);
-  }, [isActive, timeLeft]);
+  }, [isActive, timeLeft, socket]);
 
   const addMinute = () => {
-    setTimeLeft(prev => prev + 60);
-    setIsActive(true);
+    if (socket && roomCode) {
+      // Emitir al servidor para añadir tiempo
+      socket.emit('add_debate_time', { code: roomCode, seconds: 60 });
+    } else {
+      // Fallback local
+      setTimeLeft(prev => prev + 60);
+      setIsActive(true);
+    }
   };
 
   const minutes = Math.floor(timeLeft / 60);

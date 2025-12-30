@@ -39,6 +39,8 @@ interface RoomData {
   winner: 'citizens' | 'impostor' | null;
   gameConfig?: GameConfig;
   eliminationData?: EliminationData;
+  debateTimeRemaining?: number;
+  debateTimerActive?: boolean;
 }
 
 export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
@@ -429,6 +431,9 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                     if (isHost) handleNextPhase('VOTING');
                 }}
                 players={currentRoom.players}
+                socket={socket}
+                roomCode={currentRoom.code}
+                serverTimeRemaining={currentRoom.debateTimeRemaining}
               />
               {!isHost && (
                 <div className="text-center p-4 text-slate-500 text-sm">
@@ -603,34 +608,37 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                           </div>
                         </div>
 
-                        {/* Cantidad de Encubiertos - Solo chaos/hardcore */}
-                        {(gameMode === 'chaos' || gameMode === 'hardcore') && (
-                          <div>
-                            <label className="text-xs text-slate-400 mb-2 block">
-                              Encubiertos: {undercoverCount}
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => setUndercoverCount(Math.max(0, undercoverCount - 1))}
-                                className="w-8 h-8 bg-slate-700 rounded text-white hover:bg-slate-600"
-                              >
-                                -
-                              </button>
-                              <div className="flex-1 bg-slate-900 rounded h-8 flex items-center justify-center font-bold text-yellow-400">
-                                {undercoverCount}
-                              </div>
-                              <button
-                                onClick={() => {
-                                  const maxUndercover = Math.max(0, Math.floor(currentRoom.players.length * 0.4) - impostorCount);
-                                  setUndercoverCount(Math.min(maxUndercover, undercoverCount + 1));
-                                }}
-                                className="w-8 h-8 bg-slate-700 rounded text-white hover:bg-slate-600"
-                              >
-                                +
-                              </button>
+                        {/* Cantidad de Encubiertos */}
+                        <div>
+                          <label className="text-xs text-slate-400 mb-2 block">
+                            Encubiertos: {undercoverCount}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setUndercoverCount(Math.max(0, undercoverCount - 1))}
+                              className="w-8 h-8 bg-slate-700 rounded text-white hover:bg-slate-600"
+                            >
+                              -
+                            </button>
+                            <div className="flex-1 bg-slate-900 rounded h-8 flex items-center justify-center font-bold text-yellow-400">
+                              {undercoverCount}
                             </div>
+                            <button
+                              onClick={() => {
+                                // Máximo: debe quedar al menos 1 ciudadano
+                                const maxSpecialRoles = currentRoom.players.length - 1;
+                                const maxUndercover = maxSpecialRoles - impostorCount;
+                                setUndercoverCount(Math.min(Math.max(0, maxUndercover), undercoverCount + 1));
+                              }}
+                              className="w-8 h-8 bg-slate-700 rounded text-white hover:bg-slate-600"
+                            >
+                              +
+                            </button>
                           </div>
-                        )}
+                          <p className="text-xs text-slate-500 mt-1">
+                            Ven una palabra similar a los ciudadanos
+                          </p>
+                        </div>
 
                         {/* Selector de Temas */}
                         <div>
