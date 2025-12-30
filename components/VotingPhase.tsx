@@ -108,7 +108,7 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full animate-fade-in pb-24 pt-4 px-2 w-full max-w-4xl mx-auto">
+    <div className="flex flex-col h-full animate-fade-in pb-24 pt-4 px-2 w-full max-w-4xl mx-auto overflow-x-hidden">
       <div className="text-center mb-6">
         <h1 className="text-4xl font-black text-white mb-2 uppercase italic">¿Quién es el gil?</h1>
         <p className="text-slate-400 text-sm">Votá al sospechoso</p>
@@ -131,8 +131,8 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-1">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="flex-1 overflow-y-auto pr-1 min-h-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4">
           {livingPlayers.map((player) => {
             const isSelected = selectedSuspect === player.id;
             const votesReceived = getVotesForPlayer(player.id);
@@ -146,10 +146,10 @@ export const VotingPhase: React.FC<VotingPhaseProps> = ({
                 disabled={isMe}
                 className={`relative flex items-center p-4 rounded-2xl border-2 transition-all duration-200 group ${
                   isSelected
-                    ? 'bg-red-900/30 border-red-500 shadow-2xl shadow-red-500/30 scale-105 ring-2 ring-red-500/50'
+                    ? 'bg-red-900/30 border-red-500 shadow-2xl shadow-red-500/30 ring-2 ring-red-500/50'
                     : isMe
                     ? 'bg-slate-800/50 border-slate-700/50 opacity-60 cursor-not-allowed'
-                    : 'bg-slate-800 border-slate-700 hover:border-slate-500 hover:scale-[1.02] cursor-pointer'
+                    : 'bg-slate-800 border-slate-700 hover:border-slate-500 cursor-pointer'
                 }`}
               >
                 {/* Banner "TU VOTO" si está seleccionado */}

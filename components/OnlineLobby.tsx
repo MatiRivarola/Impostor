@@ -704,6 +704,48 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
 
                 {/* Right Column: Players List */}
                 <div className="w-full max-w-md md:max-w-none md:w-2/3 bg-slate-900/50 rounded-3xl border border-slate-800 p-6 md:p-8 flex flex-col h-full min-h-[400px]">
+                    {/* Configuración de la Partida - Visible para todos */}
+                    {currentRoom.gameConfig && (
+                      <div className="mb-6 bg-slate-800/60 rounded-2xl border border-slate-700 p-4">
+                        <h3 className="font-bold text-slate-300 text-sm uppercase tracking-wide mb-3 flex items-center gap-2">
+                          <span className="text-blue-400">⚙️</span> Configuración de la Partida
+                        </h3>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-700">
+                            <p className="text-slate-500 text-xs mb-1">Modo</p>
+                            <p className="text-white font-bold uppercase">
+                              {currentRoom.gameConfig.gameMode === 'classic' && '🛡️ Clásico'}
+                              {currentRoom.gameConfig.gameMode === 'chaos' && '🎭 Caos'}
+                              {currentRoom.gameConfig.gameMode === 'hardcore' && '💀 Hardcore'}
+                            </p>
+                          </div>
+                          <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-700">
+                            <p className="text-slate-500 text-xs mb-1">Impostores</p>
+                            <p className="text-red-400 font-bold">{currentRoom.gameConfig.impostorCount}</p>
+                          </div>
+                          {currentRoom.gameConfig.undercoverCount > 0 && (
+                            <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-700">
+                              <p className="text-slate-500 text-xs mb-1">Encubiertos</p>
+                              <p className="text-yellow-400 font-bold">{currentRoom.gameConfig.undercoverCount}</p>
+                            </div>
+                          )}
+                          <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-700 col-span-2">
+                            <p className="text-slate-500 text-xs mb-2">Temas</p>
+                            <div className="flex flex-wrap gap-1">
+                              {currentRoom.gameConfig.themes.map((themeId) => {
+                                const theme = THEMES.find(t => t.id === themeId);
+                                return theme ? (
+                                  <span key={themeId} className="bg-emerald-900/40 text-emerald-300 text-xs px-2 py-1 rounded-full border border-emerald-700 font-medium">
+                                    {theme.emoji} {theme.label}
+                                  </span>
+                                ) : null;
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="font-bold text-slate-300 flex items-center gap-3 text-xl">
                             <Users size={24} /> Jugadores Conectados
