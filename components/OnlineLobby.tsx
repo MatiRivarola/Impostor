@@ -8,6 +8,7 @@ import { DebatePhase } from './DebatePhase';
 import { VotingPhase } from './VotingPhase';
 import { ResultPhase } from './ResultPhase';
 import { getGameWords } from '../services/wordService';
+import { THEMES } from '../constants';
 
 // --- CONFIGURATION ---
 // URL del servidor Socket.IO (desde variable de entorno)
@@ -19,6 +20,12 @@ interface OnlineLobbyProps {
 
 type OnlinePhase = 'LOBBY' | 'ASSIGNMENT' | 'DEBATE' | 'VOTING' | 'RESULT';
 
+interface GameConfig {
+  themes: string[];
+  impostorCount: number;
+  gameMode: 'classic' | 'chaos' | 'hardcore';
+}
+
 interface RoomData {
   code: string;
   hostId: string;
@@ -26,6 +33,7 @@ interface RoomData {
   players: Player[];
   secretWord: string;
   winner: 'citizens' | 'impostor' | null;
+  gameConfig?: GameConfig;
 }
 
 export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
@@ -42,6 +50,11 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
   const [currentRoom, setCurrentRoom] = useState<RoomData | null>(null);
   const [myPlayerId, setMyPlayerId] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Game Configuration (for host only)
+  const [selectedThemes, setSelectedThemes] = useState<string[]>(['argentina']);
+  const [impostorCount, setImpostorCount] = useState(1);
+  const [gameMode, setGameMode] = useState<'classic' | 'chaos' | 'hardcore'>('classic');
 
   // --- WEBSOCKET CONNECTION ---
   
@@ -144,8 +157,14 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
 
   const handleStartGame = () => {
     if (!currentRoom || !socket) return;
-    // El servidor asignará roles y palabra
-    socket.emit('start_game', { code: currentRoom.code });
+
+    const config: GameConfig = {
+      themes: selectedThemes,
+      impostorCount: impostorCount,
+      gameMode: gameMode,
+    };
+
+    socket.emit('start_game', { code: currentRoom.code, config });
   };
 
   const handleNextPhase = (nextPhase: OnlinePhase) => {
@@ -333,7 +352,17 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
 
                     <div className="w-full space-y-3">
                         {isHost ? (
-                            <Button onClick={handleStartGame} disabled={currentRoom.players.length < 3} variant="primary" fullWidth className="flex items-center justify-center gap-2 py-4 text-lg font-black shadow-lg shadow-blue-900/40 animate-pulse">
+                            <Button
+                              onClick={handleStartGame}
+                              disabled={
+                                currentRoom.players.length < 3 ||
+                                selectedThemes.length === 0 ||
+                                impostorCount >= currentRoom.players.length
+                              }
+                              variant="primary"
+                              fullWidth
+                              className="flex items-center justify-center gap-2 py-4 text-lg font-black shadow-lg shadow-blue-900/40 animate-pulse"
+                            >
                                 <Play size={24} fill="currentColor" /> INICIAR PARTIDA
                             </Button>
                         ) : (
@@ -347,6 +376,94 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
                             <Share2 size={18} /> Invitar Amigos
                         </Button>
                     </div>
+
+                    {/* Panel de Configuración - Solo host en LOBBY */}
+                    {isHost && (
+                      <div className="mt-6 bg-slate-800/50 rounded-2xl border border-slate-700 p-4 space-y-4">
+                        <h3 className="font-bold text-slate-300 text-sm uppercase tracking-wide">
+                          Configuración del Juego
+                        </h3>
+
+                        {/* Selector de Modo */}
+                        <div>
+                          <label className="text-xs text-slate-400 mb-2 block">Modo de Juego</label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'classic', label: 'CLÁSICO' },
+                              { id: 'chaos', label: 'CAOS' },
+                              { id: 'hardcore', label: 'HARDCORE' }
+                            ].map((mode) => (
+                              <button
+                                key={mode.id}
+                                onClick={() => setGameMode(mode.id as any)}
+                                className={`p-2 rounded-lg text-xs font-bold transition-all ${
+                                  gameMode === mode.id
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                                }`}
+                              >
+                                {mode.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Cantidad de Impostores */}
+                        <div>
+                          <label className="text-xs text-slate-400 mb-2 block">
+                            Impostores: {impostorCount}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setImpostorCount(Math.max(1, impostorCount - 1))}
+                              className="w-8 h-8 bg-slate-700 rounded text-white hover:bg-slate-600"
+                            >
+                              -
+                            </button>
+                            <div className="flex-1 bg-slate-900 rounded h-8 flex items-center justify-center font-bold text-white">
+                              {impostorCount}
+                            </div>
+                            <button
+                              onClick={() => setImpostorCount(Math.min(Math.floor(currentRoom.players.length / 2), impostorCount + 1))}
+                              className="w-8 h-8 bg-slate-700 rounded text-white hover:bg-slate-600"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Selector de Temas */}
+                        <div>
+                          <label className="text-xs text-slate-400 mb-2 block">
+                            Temas ({selectedThemes.length} seleccionados)
+                          </label>
+                          <div className="grid grid-cols-4 gap-1 max-h-32 overflow-y-auto">
+                            {THEMES.map((theme) => (
+                              <button
+                                key={theme.id}
+                                onClick={() => {
+                                  if (selectedThemes.includes(theme.id)) {
+                                    if (selectedThemes.length > 1) {
+                                      setSelectedThemes(selectedThemes.filter(t => t !== theme.id));
+                                    }
+                                  } else {
+                                    setSelectedThemes([...selectedThemes, theme.id]);
+                                  }
+                                }}
+                                className={`p-2 rounded text-xs transition-all ${
+                                  selectedThemes.includes(theme.id)
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                                }`}
+                                title={theme.label}
+                              >
+                                {theme.emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                 </div>
 
                 {/* Right Column: Players List */}
