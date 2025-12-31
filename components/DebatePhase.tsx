@@ -12,6 +12,7 @@ interface DebatePhaseProps {
   roomCode?: string;
   serverTimeRemaining?: number;
   isHost?: boolean;
+  isLocalMode?: boolean; // Nueva prop para modo local
 }
 
 export const DebatePhase: React.FC<DebatePhaseProps> = ({
@@ -21,7 +22,8 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({
   socket,
   roomCode,
   serverTimeRemaining,
-  isHost = false
+  isHost = false,
+  isLocalMode = false
 }) => {
   // Usar tiempo del servidor si está disponible, sino usar el local
   const [timeLeft, setTimeLeft] = useState(serverTimeRemaining || timerDuration);
@@ -196,7 +198,8 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({
             <span className={`text-6xl font-black font-mono tracking-tighter ${timeLeft < 60 ? 'text-red-400' : 'text-white'}`}>
             {formattedTime}
             </span>
-            {isHost && (
+            {/* En modo local, todos pueden añadir tiempo. En modo online, solo el host */}
+            {(isLocalMode || isHost) && (
               <button
                   onClick={addMinute}
                   className="mt-2 flex items-center gap-1 text-xs font-bold uppercase bg-slate-800 hover:bg-slate-700 text-blue-400 px-3 py-1 rounded-full transition-colors border border-slate-700"

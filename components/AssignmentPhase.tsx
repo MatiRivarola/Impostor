@@ -60,7 +60,7 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
             ) : (
                <>
                  <h1 className="text-2xl font-bold text-slate-300 leading-tight mb-1">
-                   Pasale el celular a:
+                   Pasale el fono a:
                  </h1>
                  <p className="text-4xl font-black text-white bg-slate-900/50 px-6 py-2 rounded-xl border border-slate-700/50">
                     {player.name}

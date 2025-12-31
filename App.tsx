@@ -13,13 +13,16 @@ import { ReloadPrompt } from './components/ReloadPrompt';
 import { getGameWords } from './services/wordService';
 import { THEMES } from './constants';
 import { Button } from './components/Button';
-import { PlayCircle, AlertOctagon, Settings, ArrowLeft, RefreshCw, Trophy, Skull, CheckCircle, Home } from 'lucide-react';
+import { PlayCircle, AlertOctagon, Settings, ArrowLeft, RefreshCw, Trophy, Skull, CheckCircle, Home, ArrowRight, ArrowBigRight, Users } from 'lucide-react';
 
 interface RoundFeedback {
-    type: 'success' | 'danger' | 'info';
+    type: 'success' | 'danger' | 'info' | 'round_start';
     title: string;
     subtitle: string;
     description: string;
+    role?: string; // Rol del jugador eliminado
+    extraInfo?: string; // Información adicional
+    direction?: 'derecha' | 'izquierda'; // Dirección de la ronda
 }
 
 export default function App() {
@@ -143,11 +146,12 @@ export default function App() {
       impostorCount,
       undercoverCount,
       gameMode: mode,
-      theme: themeLabel, 
+      theme: themeLabel,
       secretWord,
       undercoverWord,
       currentPlayerIndex: 0,
       winner: null,
+      gameId: `game-${Date.now()}-${Math.random()}`, // Unique ID to force AssignmentPhase reset
     });
   };
 
@@ -160,16 +164,40 @@ export default function App() {
         phase: 'ASSIGNMENT_WAIT'
       }));
     } else {
-      setGameState(prev => ({ ...prev, phase: 'DEBATE' }));
+      // Al terminar de asignar roles, mostrar mensaje de inicio
+      if (!gameState.roundStartShown) {
+        // Elegir jugador aleatorio que arranca
+        const alivePlayers = gameState.players.filter(p => !p.isDead);
+        const randomPlayer = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+        // Elegir dirección aleatoria
+        const direction = Math.random() < 0.5 ? 'derecha' : 'izquierda';
+
+        setGameState(prev => ({
+          ...prev,
+          roundStartShown: true,
+          turnDirection: direction,
+          startingPlayer: randomPlayer.name
+        }));
+
+        setFeedback({
+          type: 'round_start',
+          title: '¡ARRANCA LA RONDA!',
+          subtitle: randomPlayer.name,
+          description: `Sigan el orden hacia la ${direction}`,
+          direction: direction
+        });
+      } else {
+        setGameState(prev => ({ ...prev, phase: 'DEBATE' }));
+      }
     }
   };
 
   const handleVote = (victimId: string) => {
-    const updatedPlayers = gameState.players.map(p => 
+    const updatedPlayers = gameState.players.map(p =>
       p.id === victimId ? { ...p, isDead: true } : p
     );
     const victim = gameState.players.find(p => p.id === victimId);
-    
+
     if (victim?.role === 'impostor') {
         if (gameState.gameMode === 'hardcore') {
             setGameState(prev => ({
@@ -187,25 +215,32 @@ export default function App() {
             setGameState(prev => ({ ...prev, players: updatedPlayers }));
             setFeedback({
                 type: 'success',
-                title: '¡IMPOSTOR ATRAPADO!',
-                subtitle: `Era ${victim.name}`,
-                description: `¡Bien jugado! Pero ojo... todavía quedan ${remainingImpostors} impostor(es) sueltos.`
+                title: '¡IMPOSTOR ELIMINADO!',
+                subtitle: victim.name,
+                role: 'IMPOSTOR',
+                description: remainingImpostors === 1
+                  ? `¡Excelente! Pero cuidado... todavía queda ${remainingImpostors} impostor suelto.`
+                  : `¡Bien jugado! Pero ojo... todavía quedan ${remainingImpostors} impostores sueltos.`
             });
         }
-    } 
+    }
     else {
         const livingPlayers = updatedPlayers.filter(p => !p.isDead).length;
         const livingImpostors = updatedPlayers.filter(p => !p.isDead && p.role === 'impostor').length;
-        
+
         if (livingPlayers <= 2 || livingImpostors >= livingPlayers) {
             finishGame('impostor', updatedPlayers);
         } else {
             setGameState(prev => ({ ...prev, players: updatedPlayers }));
             setFeedback({
                 type: 'danger',
-                title: '¡QUÉ PIFIADA!',
-                subtitle: `${victim?.name} era ${victim?.role === 'undercover' ? 'ENCUBIERTO' : 'CIUDADANO'}`,
-                description: 'Le erraron feo. El Impostor se les está cagando de risa.'
+                title: '¡SE EQUIVOCARON!',
+                subtitle: victim?.name || '',
+                role: victim?.role === 'undercover' ? 'ENCUBIERTO' : 'CIUDADANO',
+                description: victim?.role === 'undercover'
+                  ? `Era un encubierto, no un impostor. El impostor sigue entre ustedes...`
+                  : `Era un ciudadano inocente. El impostor está riéndose de ustedes.`,
+                extraInfo: `Quedan ${livingImpostors} impostor(es) y ${livingPlayers - livingImpostors} ciudadano(s)`
             });
         }
     }
@@ -274,37 +309,164 @@ export default function App() {
   if (feedback) {
     const isSuccess = feedback.type === 'success';
     const isInfo = feedback.type === 'info';
-    
+    const isDanger = feedback.type === 'danger';
+    const isRoundStart = feedback.type === 'round_start';
+
     let Icon = AlertOctagon;
     let colorClass = 'text-red-500';
     let bgClass = 'bg-red-500/20 border-red-500/50';
+    let gradientFrom = 'from-red-900';
+    let roleColorClass = 'text-red-500 bg-red-500/10 border-red-500/30';
 
-    if (isSuccess) {
+    if (isRoundStart) {
+        Icon = Users;
+        colorClass = 'text-blue-400';
+        bgClass = 'bg-blue-500/20 border-blue-500/50';
+        gradientFrom = 'from-blue-900';
+    } else if (isSuccess) {
         Icon = CheckCircle;
         colorClass = 'text-green-500';
         bgClass = 'bg-green-500/20 border-green-500/50';
+        gradientFrom = 'from-green-900';
+        roleColorClass = 'text-red-500 bg-red-500/10 border-red-500/30';
     } else if (isInfo) {
         Icon = Skull;
         colorClass = 'text-blue-500';
         bgClass = 'bg-blue-500/20 border-blue-500/50';
+        gradientFrom = 'from-blue-900';
+        roleColorClass = 'text-blue-500 bg-blue-500/10 border-blue-500/30';
+    } else if (isDanger) {
+        // Para CIUDADANO o ENCUBIERTO (error)
+        if (feedback.role === 'CIUDADANO') {
+            roleColorClass = 'text-blue-400 bg-blue-500/10 border-blue-500/30';
+        } else if (feedback.role === 'ENCUBIERTO') {
+            roleColorClass = 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30';
+        }
     }
 
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-fade-in relative overflow-hidden">
-        <div className={`absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] ${isSuccess ? 'from-green-900' : 'from-red-900'} via-slate-950 to-slate-950`}></div>
-        <div className="relative z-10 w-full max-w-md bg-slate-900/90 p-8 rounded-3xl border-2 border-slate-800 shadow-2xl backdrop-blur-xl">
-            <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 ${bgClass} ${colorClass} border-2 animate-bounce-slow`}>
-                <Icon size={48} />
+        <div className={`absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] ${gradientFrom} via-slate-950 to-slate-950`}></div>
+
+        {/* Mensaje de INICIO DE RONDA */}
+        {isRoundStart ? (
+          <div className="relative z-10 w-full max-w-lg bg-slate-900/95 p-8 rounded-3xl border-2 border-blue-500/50 shadow-2xl backdrop-blur-xl">
+            {/* Ícono principal */}
+            <div className={`w-28 h-28 rounded-full flex items-center justify-center mx-auto mb-6 ${bgClass} ${colorClass} border-2 animate-pulse`}>
+                <Icon size={56} strokeWidth={2.5} />
             </div>
-            <h1 className="text-3xl font-black text-white mb-2 uppercase italic tracking-tighter">{feedback.title}</h1>
-            <div className="bg-slate-800 rounded-xl p-4 my-6 border border-slate-700">
-                <p className="text-xl text-slate-200 font-bold mb-2">{feedback.subtitle}</p>
-                <p className="text-slate-400 text-sm">{feedback.description}</p>
+
+            {/* Título principal */}
+            <h1 className={`text-4xl font-black mb-6 uppercase italic tracking-tight ${colorClass}`}>
+                {feedback.title}
+            </h1>
+
+            {/* Card con la información de inicio */}
+            <div className="bg-slate-800/80 rounded-2xl p-6 mb-6 border-2 border-slate-700">
+                {/* Jugador que arranca */}
+                <div className="mb-6">
+                    <p className="text-slate-500 text-xs uppercase tracking-widest font-bold mb-2">ARRANCA</p>
+                    <p className="text-4xl text-blue-400 font-black tracking-tight mb-2">{feedback.subtitle}</p>
+                </div>
+
+                {/* Dirección con flechas */}
+                <div className="bg-blue-500/10 rounded-xl p-5 border-2 border-blue-500/30">
+                    <p className="text-xs uppercase tracking-widest font-bold text-blue-300 mb-3">Dirección de turnos</p>
+                    <div className="flex items-center justify-center gap-3">
+                        {feedback.direction === 'derecha' ? (
+                            <>
+                                <div className="flex items-center gap-2 animate-pulse">
+                                    <ArrowBigRight size={40} className="text-blue-400" fill="currentColor" />
+                                    <span className="text-3xl font-black uppercase text-blue-400">DERECHA</span>
+                                    <ArrowBigRight size={40} className="text-blue-400" fill="currentColor" />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex items-center gap-2 animate-pulse">
+                                    <ArrowBigRight size={40} className="text-blue-400 rotate-180" fill="currentColor" />
+                                    <span className="text-3xl font-black uppercase text-blue-400">IZQUIERDA</span>
+                                    <ArrowBigRight size={40} className="text-blue-400 rotate-180" fill="currentColor" />
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* Descripción */}
+                <div className="bg-slate-900/50 rounded-lg p-4 mt-4 border border-slate-700/50">
+                    <p className="text-slate-300 text-base leading-relaxed font-medium">{feedback.description}</p>
+                </div>
             </div>
-            <Button onClick={continueRound} fullWidth variant="primary" className="py-4 text-lg font-black uppercase tracking-wide shadow-lg shadow-blue-900/30">
-                <PlayCircle className="inline mr-2" size={24} /> Seguir Jugando
+
+            {/* Botón para empezar */}
+            <Button
+                onClick={() => {
+                    setFeedback(null);
+                    setGameState(prev => ({ ...prev, phase: 'DEBATE' }));
+                }}
+                fullWidth
+                variant="primary"
+                className="py-5 text-lg font-black uppercase tracking-wide shadow-xl"
+            >
+                <PlayCircle className="inline mr-2" size={24} />
+                ¡EMPEZAR A DISCUTIR!
             </Button>
-        </div>
+          </div>
+        ) : (
+          /* Mensajes de ELIMINACIÓN (success/danger/info) */
+          <div className="relative z-10 w-full max-w-lg bg-slate-900/95 p-8 rounded-3xl border-2 border-slate-800 shadow-2xl backdrop-blur-xl">
+            {/* Ícono principal */}
+            <div className={`w-28 h-28 rounded-full flex items-center justify-center mx-auto mb-6 ${bgClass} ${colorClass} border-2 ${isSuccess ? 'animate-bounce-slow' : 'animate-pulse'}`}>
+                <Icon size={56} strokeWidth={2.5} />
+            </div>
+
+            {/* Título principal */}
+            <h1 className={`text-4xl font-black mb-6 uppercase italic tracking-tight ${colorClass}`}>
+                {feedback.title}
+            </h1>
+
+            {/* Card del jugador eliminado */}
+            <div className="bg-slate-800/80 rounded-2xl p-6 mb-6 border-2 border-slate-700">
+                {/* Nombre del eliminado */}
+                <div className="mb-4">
+                    <p className="text-slate-500 text-xs uppercase tracking-widest font-bold mb-2">ELIMINADO</p>
+                    <p className="text-3xl text-white font-black tracking-tight">{feedback.subtitle}</p>
+                </div>
+
+                {/* Rol revelado - GRANDE Y CLARO */}
+                {feedback.role && (
+                    <div className={`rounded-xl p-4 border-2 mb-4 ${roleColorClass}`}>
+                        <p className="text-xs uppercase tracking-widest font-bold opacity-70 mb-1">Su rol era:</p>
+                        <p className="text-3xl font-black uppercase tracking-tight">{feedback.role}</p>
+                    </div>
+                )}
+
+                {/* Descripción */}
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
+                    <p className="text-slate-300 text-base leading-relaxed font-medium">{feedback.description}</p>
+                </div>
+
+                {/* Info extra (contadores) */}
+                {feedback.extraInfo && (
+                    <div className="mt-4 bg-slate-950/50 rounded-lg p-3 border border-slate-700/30">
+                        <p className="text-slate-400 text-sm font-bold">{feedback.extraInfo}</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Botón para continuar */}
+            <Button
+                onClick={continueRound}
+                fullWidth
+                variant={isSuccess ? "primary" : "danger"}
+                className="py-5 text-lg font-black uppercase tracking-wide shadow-xl"
+            >
+                <PlayCircle className="inline mr-2" size={24} />
+                {isSuccess ? 'Continuar Cazando' : 'Otra Ronda'}
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
@@ -410,8 +572,8 @@ export default function App() {
         )}
 
         {(gameState.phase === 'ASSIGNMENT_WAIT' || gameState.phase === 'ASSIGNMENT_REVEAL') && (
-          <AssignmentPhase 
-            key={gameState.players[gameState.currentPlayerIndex].id} 
+          <AssignmentPhase
+            key={`${gameState.gameId}-${gameState.players[gameState.currentPlayerIndex].id}`}
             player={gameState.players[gameState.currentPlayerIndex]}
             onNext={handleNextPlayer}
             revealMode='pass-and-play'
@@ -419,9 +581,10 @@ export default function App() {
         )}
 
         {gameState.phase === 'DEBATE' && (
-          <DebatePhase 
+          <DebatePhase
             timerDuration={timerDuration}
             onTimerEnd={() => setGameState(prev => ({ ...prev, phase: 'VOTING' }))}
+            isLocalMode={true}
           />
         )}
 

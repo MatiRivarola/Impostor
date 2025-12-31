@@ -3,7 +3,7 @@ import { ThemeOption, WordPair } from './types';
 export const THEMES: ThemeOption[] = [
   { id: 'argentina', label: 'Argentinidad al Palo', emoji: '🇦🇷' },
   { id: 'cordoba', label: 'Córdoba Básica', emoji: '🍷' },
-  { id: 'religion', label: 'Religión & Creencias', emoji: '🙏' },
+  { id: 'memes_argentinos', label: 'Memes Argentinos', emoji: '🤣' },
   { id: 'farandula', label: 'Farándula & TV', emoji: '📺' },
   { id: 'comida', label: 'Comida de Bodegón', emoji: '🍕' },
   { id: 'futbol', label: 'Fútbol Pasión', emoji: '⚽' },
@@ -13,10 +13,74 @@ export const THEMES: ThemeOption[] = [
   { id: 'objetos', label: 'Cosas de la Casa', emoji: '🏠' },
   { id: 'mitos', label: 'Mitos y Leyendas', emoji: '🐉' },
   { id: 'scifi', label: 'Ciencia Ficción', emoji: '👽' },
+  { id: 'religion', label: 'Religión & Creencias', emoji: '🙏' },
   { id: 'historia', label: 'Historia Argentina', emoji: '📜' },
 ];
 
 export const WORD_LISTS: Record<string, WordPair[]> = {
+  memes_argentinos: [
+    // --- Personajes Icónicos ---
+    { normal: 'Ricardo Fort', undercover: 'Chocolate' }, // Por la fábrica y el "Cortaste toda la looz"
+    { normal: 'El Comandante', undercover: 'General' }, // Fort vs Rango militar real
+    { normal: 'Samid', undercover: 'Mauro Viale' }, // "Usted se tiene que arrepentir" (ambos protagonistas)
+    { normal: 'Atendedor de Boludos', undercover: 'Inspector de Línea' }, // Su "trabajo" real en el video
+    { normal: 'El Gigoló', undercover: 'Estafador' }, // Personaje vs Lo que realmente era
+    { normal: 'July3p', undercover: 'Youtuber' }, // Personaje vs Profesión
+    { normal: 'El Bananero', undercover: 'Harry Potter' }, // Por el video "Harry el sucio Potter" o "Sape"
+    { normal: 'Zulma Lobato', undercover: 'Vedette' }, // Personaje vs Profesión soñada
+    { normal: 'La Chabona', undercover: 'Abogada' }, // Por su video viral con Burlando
+    { normal: 'El Facha', undercover: 'Turro' }, // "Hola soy el Facha" vs Estilo
+
+    // --- Frases y Momentos Virales ---
+    { normal: 'Hermosa Mañana', undercover: 'Francella' }, // La frase vs El actor (ambos ríen)
+    { normal: 'Alto Guiso', undercover: '15 Pesos' }, // El meme vs El precio original
+    { normal: 'Y Candela?', undercover: 'La Moto' }, // La pregunta vs El objeto del choque
+    { normal: 'Un Elissir', undercover: 'Blue Label' }, // Coco Basile vs La bebida
+    { normal: 'Messirve', undercover: 'Pulgar Arriba' }, // La cara de Messi vs El gesto
+    { normal: 'Andá pa allá bobo', undercover: 'Periodista' }, // A quién se lo dijo (Weghorst/Gastón Edul cerca)
+    { normal: 'Traeme la Copa', undercover: 'Obelisco' }, // El pedido vs Donde se festeja
+    { normal: 'Esto se va a descontrolar', undercover: 'Caída' }, // La frase vs Lo que pasa después
+    { normal: 'Chinwenwencha', undercover: 'Sinvergüenza' }, // La pronunciación viral vs La palabra real
+    { normal: 'Barassi', undercover: 'Raro' }, // El conductor vs Su frase icónica "Raaaro"
+
+    // --- Selección y Fútbol (La Scaloneta) ---
+    { normal: 'Dibu Martínez', undercover: 'Loco' }, // El arquero vs Su personalidad
+    { normal: 'Abuela la la la', undercover: 'Festejo' }, // El personaje vs La acción
+    { normal: 'Scaloneta', undercover: 'Ferrari' }, // El apodo vs Un auto rápido
+    { normal: 'Papu Gómez', undercover: 'Beckham' }, // Por el stream donde se comparó
+
+    // --- TV y Cultura Bizara ---
+    { normal: 'Crónica TV', undercover: 'Placa Roja' }, // El canal vs Su elemento más famoso
+    { normal: 'Okupas', undercover: 'Pollo' }, // La serie vs El personaje/comida
+    { normal: 'Los Simuladores', undercover: 'Operativo' }, // La serie vs Lo que hacen
+    { normal: 'Teto Medina', undercover: 'Humo' }, // Momentos bizarros vs Efecto
+    { normal: 'Las Pastillas del Abuelo', undercover: 'Maradona' }, // Por la canción viralizada
+    { normal: 'Pity Álvarez', undercover: 'Fuego' }, // Sus locuras vs Incendio
+
+    // --- Actualidad "Memeable" ---
+    { normal: 'Horno de Barro', undercover: 'Pizzero' }, // Por el meme de "Rompió el horno de barro"
+    { normal: 'Mylazyan', undercover: 'Milanesa' }, // La pronunciación cheta vs La comida
+    { normal: 'Nordelta', undercover: 'Carpincho' }, // El lugar vs Los invasores
+    { normal: 'Fábrica de Pastas', undercover: 'Ñoqui' }, // Lugar real vs Empleado público (doble sentido)
+    { normal: 'Trapito', undercover: 'Estacionamiento' }, // Personaje urbano vs Lugar
+    { normal: 'Visto', undercover: 'Clavado' }, // WhatsApp vs Acción
+
+    // --- Extras para completar ---
+    { normal: 'AFIP', undercover: 'Ladrón' }, // Meme clásico argentino
+    { normal: 'No es Coca Papi', undercover: 'Coca-Cola' }, // Frase viral
+    { normal: 'Tinelli', undercover: 'Lunes' }, // Ambos molestos
+    { normal: 'Batakis', undercover: 'Emoji' }, // Por el gif viral
+    { normal: 'Galperin', undercover: 'Mercado Libre' }, // El dueño vs La empresa
+    { normal: 'Manaos', undercover: 'Veneno' }, // Meme de la gaseosa
+    { normal: 'El Diego', undercover: 'Dios' }, // Maradona el eterno
+    { normal: 'Mirtha', undercover: 'Dinosaurio' }, // Meme de la longevidad
+    { normal: 'Boca Juniors', undercover: 'Gallina' }, // Clásico insulto
+    { normal: 'River Plate', undercover: 'Pato' }, // Clásico insulto
+    { normal: 'Perón', undercover: 'Fantasma' }, // Siempre vuelve
+    { normal: 'La Pesada', undercover: 'Mochila' }, // Algo que pesa
+    { normal: 'Guarda con el Quemado', undercover: 'Limón' }, // Meme clásico
+    { normal: 'Y Bueno', undercover: 'Dale' }, // Frases comodín argentinas
+  ],
   mitos: [
     { normal: 'Drácula', undercover: 'Murciélago' },
     { normal: 'Hombre Lobo', undercover: 'Perro' },
@@ -229,6 +293,9 @@ export const WORD_LISTS: Record<string, WordPair[]> = {
     { normal: 'Villa Warcalde', undercover: 'Campo' },
     { normal: 'Feriar', undercover: 'Mercado' },
     { normal: 'Tropezón', undercover: 'Caída' },
+    //Mas palabras graciosas de memes de internet
+    {normal: 'Chupetón', undercover: 'Chupete'},
+    {normal: 'No es coca papi', undercover: 'Coca-Cola'},
   ],
   argentina: [
     { normal: 'Mate', undercover: 'Pasto' },

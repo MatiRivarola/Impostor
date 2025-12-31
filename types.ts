@@ -46,8 +46,12 @@ export interface GameState {
   theme: string; // Label of the chosen theme (or mixed)
   secretWord: string; // The "Real" word (Citizens)
   undercoverWord: string; // The "Fake" word (Undercover)
-  currentPlayerIndex: number; 
+  currentPlayerIndex: number;
   winner: 'citizens' | 'impostor' | null;
+  gameId?: string; // Unique ID for each game session to force component remount
+  roundStartShown?: boolean; // Si ya se mostró el mensaje de inicio de ronda
+  turnDirection?: 'derecha' | 'izquierda'; // Dirección de los turnos
+  startingPlayer?: string; // Nombre del jugador que arranca
 }
 
 export interface ThemeOption {

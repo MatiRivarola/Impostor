@@ -1,5 +1,5 @@
 import React from 'react';
-import { RotateCcw, Settings, Trophy, Skull } from 'lucide-react';
+import { RotateCcw, Settings, Trophy } from 'lucide-react';
 import { Button } from './Button';
 import { Player, ScoreMap } from '../types';
 
