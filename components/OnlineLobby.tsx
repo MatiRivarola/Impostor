@@ -313,12 +313,12 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ onBack }) => {
   if (connectionState === 'initial' || connectionState === 'connecting') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-6 text-center animate-fade-in">
-        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 className="text-2xl font-bold mb-2">Conectando al servidor...</h2>
-        <p className="text-slate-400 mb-6">
-          <span className="font-mono bg-slate-900 px-2 py-1 rounded">{SERVER_URL}</span>
-        </p>
-        <div className="flex gap-2">
+        <div className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+        <h2 className="text-3xl font-black mb-2 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+          Cargando Multijugador
+        </h2>
+        <p className="text-slate-400 text-sm">Preparando todo para la acción...</p>
+        <div className="flex gap-2 mt-6">
           {[...Array(3)].map((_, i) => (
             <div
               key={i}
