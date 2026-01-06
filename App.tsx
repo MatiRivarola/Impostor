@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Analytics } from "@vercel/analytics/react"
 import { GameState, Player, ScoreMap, GameMode, AppMode } from './types';
 import { SetupPhase } from './components/SetupPhase';
 import { AssignmentPhase } from './components/AssignmentPhase';
@@ -613,6 +614,7 @@ export default function App() {
           />
         )}
       </div>
+      <Analytics />
     </div>
   );
 }
