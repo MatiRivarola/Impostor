@@ -52,6 +52,8 @@ export interface GameState {
   roundStartShown?: boolean; // Si ya se mostró el mensaje de inicio de ronda
   turnDirection?: 'derecha' | 'izquierda'; // Dirección de los turnos
   startingPlayer?: string; // Nombre del jugador que arranca
+  currentRound: number; // Ronda actual (empieza en 1)
+  maxRounds: number | null; // Límite de rondas (null = infinitas)
 }
 
 export interface ThemeOption {

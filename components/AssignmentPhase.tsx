@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, ChevronRight, MousePointerClick, Check, Lock, ShieldAlert, Drama } from 'lucide-react';
+import { Eye, EyeOff, ChevronRight, MousePointerClick, Check, Lock, ShieldAlert } from 'lucide-react';
 import { Button } from './Button';
 import { Player } from '../types';
 
@@ -19,7 +19,8 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
   const isUndercover = player.role === 'undercover';
   const isCitizen = player.role === 'citizen';
 
-  const displayRole = isImpostor ? 'IMPOSTOR' : isUndercover ? 'ENCUBIERTO' : 'CIUDADANO';
+  // El encubierto ve "CIUDADANO" para no saber que es encubierto
+  const displayRole = isImpostor ? 'IMPOSTOR' : 'CIUDADANO';
   const isSinglePlayer = revealMode === 'single-player';
 
   const handleReveal = (e: React.MouseEvent) => {
@@ -42,7 +43,13 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
         {/* --- FRONT OF CARD (CLOSED) --- */}
         {/* Added cursor-default to prevent implying the whole card is clickable */}
         <div className="absolute inset-0 backface-hidden w-full h-full bg-slate-800 rounded-3xl border-2 border-slate-600 shadow-2xl flex flex-col items-center justify-between p-8 text-center cursor-default">
-          <div className="mt-8 flex flex-col items-center w-full">
+          {/* Leyenda instructiva */}
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-2 w-full">
+            <p className="text-blue-300 text-[11px] leading-tight font-medium">
+              Cada jugador recibe su rol en secreto. Pasá el celular al jugador indicado y que solo esa persona mire.
+            </p>
+          </div>
+          <div className="mt-4 flex flex-col items-center w-full">
             <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center mb-6 text-white border-4 border-slate-700 shadow-lg relative">
               <Lock size={40} className="animate-pulse" />
               <div className="absolute -bottom-2 bg-slate-900 text-xs px-2 py-1 rounded-full border border-slate-600 font-bold uppercase tracking-widest text-slate-400">
@@ -93,8 +100,6 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
         <div className={`absolute inset-0 backface-hidden w-full h-full rounded-3xl border-2 shadow-2xl flex flex-col items-center justify-between p-6 text-center rotate-y-180 bg-slate-900 cursor-default ${
           isImpostor
             ? 'border-red-500 shadow-[0_0_50px_rgba(220,38,38,0.25)]'
-            : isUndercover
-            ? 'border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.25)]'
             : 'border-blue-500 shadow-[0_0_50px_rgba(37,99,235,0.25)]'
         }`}>
           <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -102,10 +107,6 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
                 {isImpostor ? (
                 <div className="w-28 h-28 bg-red-500/10 rounded-full flex items-center justify-center mx-auto text-red-500 border-2 border-red-500/30 animate-pulse">
                     <EyeOff size={56} />
-                </div>
-                ) : isUndercover ? (
-                <div className="w-28 h-28 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto text-yellow-500 border-2 border-yellow-500/30">
-                    <Drama size={56} />
                 </div>
                 ) : (
                 <div className="w-28 h-28 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto text-blue-500 border-2 border-blue-500/30">
@@ -116,7 +117,7 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
 
             <h2 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">TU ROL ES</h2>
             <h1 className={`text-4xl font-black mb-6 uppercase tracking-tight ${
-              isImpostor ? 'text-red-500' : isUndercover ? 'text-yellow-500' : 'text-blue-500'
+              isImpostor ? 'text-red-500' : 'text-blue-500'
             }`}>
                 {displayRole}
             </h1>
@@ -131,15 +132,6 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
                         <p className="text-red-200 text-sm">Escuchá, deducí y mentí para que no te descubran.</p>
                     </div>
                 </div>
-            ) : isUndercover ? (
-                <div className="bg-yellow-900/20 p-6 rounded-2xl border border-yellow-500/30 w-full">
-                    <p className="text-yellow-500 text-xs uppercase font-bold mb-2">Tu palabra es SIMILAR</p>
-                    <p className="text-3xl font-black text-white tracking-tight break-words mb-4 select-all">{player.word}</p>
-                    <div className="mt-2 bg-yellow-950/50 p-3 rounded-lg">
-                        <p className="text-yellow-400 text-xs font-bold uppercase">Objetivo</p>
-                        <p className="text-yellow-200 text-xs">Mezclate con los ciudadanos sin revelar tu palabra.</p>
-                    </div>
-                </div>
             ) : (
                 <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 w-full relative overflow-hidden group">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
@@ -149,9 +141,9 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
             )}
           </div>
 
-          <Button 
+          <Button
             onClick={handleNext}
-            variant={isImpostor ? 'danger' : 'primary'} // Visual feedback based on role
+            variant={isImpostor ? 'danger' : 'primary'}
             fullWidth
             className="mt-6 py-4 text-lg shadow-xl font-bold tracking-wide"
           >

@@ -38,6 +38,8 @@ export default function App() {
     undercoverWord: '',
     currentPlayerIndex: 0,
     winner: null,
+    currentRound: 1,
+    maxRounds: null,
   };
 
   // State Persistence Initialization
@@ -79,20 +81,42 @@ export default function App() {
     localStorage.setItem('impostor_scores', JSON.stringify(scores));
   }, [scores]);
 
-  const updateScores = (winner: 'citizens' | 'impostor', players: Player[]) => {
+  // Historial de impostores para selección ponderada
+  const [impostorHistory, setImpostorHistory] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem('impostor_history');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('impostor_history', JSON.stringify(impostorHistory));
+  }, [impostorHistory]);
+
+  const updateScores = (winner: 'citizens' | 'impostor', players: Player[], roundsSurvived: number) => {
     setScores(prevScores => {
         const newScores = { ...prevScores };
         players.forEach(p => {
             if (newScores[p.name] === undefined) newScores[p.name] = 0;
 
             if (winner === 'citizens') {
-                if (p.role === 'citizen' || p.role === 'undercover') {
+                if (p.role === 'citizen') {
                     newScores[p.name] += 100;
+                } else if (p.role === 'undercover') {
+                    // Encubierto: más puntos si sobrevivió, menos si lo eliminaron
+                    newScores[p.name] += p.isDead ? 50 : 150;
+                } else if (p.role === 'impostor') {
+                    newScores[p.name] += roundsSurvived * 25;
                 }
             } else {
+                // Impostor gana
                 if (p.role === 'impostor') {
-                    newScores[p.name] += 200;
+                    newScores[p.name] += 100 + (roundsSurvived * 50);
+                } else if (p.role === 'undercover') {
+                    // Encubierto sobrevivió pero perdió: puntos parciales
+                    newScores[p.name] += p.isDead ? 0 : 25;
                 }
+                // Ciudadanos: 0 puntos si pierden
             }
         });
         return newScores;
@@ -104,37 +128,69 @@ export default function App() {
     localStorage.removeItem('impostor_scores');
   };
 
-  const startGame = (names: string[], impostorCount: number, undercoverCount: number, selectedThemes: string[], mode: GameMode) => {
+  const startGame = (names: string[], impostorCount: number, undercoverCount: number, selectedThemes: string[], mode: GameMode, roundLimit: number | null = null) => {
     const { secretWord, undercoverWord, themeLabel } = getGameWords(selectedThemes);
-    
+
     // Initialize Players
     const newPlayers: Player[] = names.map((name, i) => ({
       id: `p-${i}`,
       name,
       role: 'citizen',
-      word: secretWord, 
+      word: secretWord,
       isDead: false,
     }));
 
-    const indices = Array.from({ length: names.length }, (_, i) => i);
-    // Shuffle
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
-    }
+    // Selección ponderada de impostores basada en historial
+    const weightedSelect = (count: number, pool: number[]): number[] => {
+      const selected: number[] = [];
+      const remaining = [...pool];
+      for (let c = 0; c < count && remaining.length > 0; c++) {
+        const weights = remaining.map(idx => {
+          const name = names[idx];
+          const timesImpostor = impostorHistory[name] || 0;
+          return 1 / (timesImpostor + 1);
+        });
+        const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+        let rand = Math.random() * totalWeight;
+        let chosenIdx = 0;
+        for (let w = 0; w < weights.length; w++) {
+          rand -= weights[w];
+          if (rand <= 0) { chosenIdx = w; break; }
+        }
+        selected.push(remaining[chosenIdx]);
+        remaining.splice(chosenIdx, 1);
+      }
+      return selected;
+    };
 
-    let i = 0;
-    for (let count = 0; count < impostorCount; count++) {
-      const idx = indices[i++];
+    const allIndices = Array.from({ length: names.length }, (_, i) => i);
+    const impostorIndices = weightedSelect(impostorCount, allIndices);
+
+    // Actualizar historial de impostores
+    const newHistory = { ...impostorHistory };
+    impostorIndices.forEach(idx => {
+      const name = names[idx];
+      newHistory[name] = (newHistory[name] || 0) + 1;
+    });
+    setImpostorHistory(newHistory);
+
+    impostorIndices.forEach(idx => {
       newPlayers[idx].role = 'impostor';
-      newPlayers[idx].word = undefined; 
+      newPlayers[idx].word = undefined;
+    });
+
+    const remainingIndices = allIndices.filter(idx => !impostorIndices.includes(idx));
+    // Shuffle remaining para undercover
+    for (let i = remainingIndices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [remainingIndices[i], remainingIndices[j]] = [remainingIndices[j], remainingIndices[i]];
     }
 
     for (let count = 0; count < undercoverCount; count++) {
-       if (i >= indices.length) break;
-       const idx = indices[i++];
+       if (count >= remainingIndices.length) break;
+       const idx = remainingIndices[count];
        newPlayers[idx].role = 'undercover';
-       newPlayers[idx].word = undercoverWord; 
+       newPlayers[idx].word = undercoverWord;
     }
 
     const dynamicTime = Math.max(180, names.length * 60);
@@ -152,7 +208,9 @@ export default function App() {
       undercoverWord,
       currentPlayerIndex: 0,
       winner: null,
-      gameId: `game-${Date.now()}-${Math.random()}`, // Unique ID to force AssignmentPhase reset
+      gameId: `game-${Date.now()}-${Math.random()}`,
+      currentRound: 1,
+      maxRounds: roundLimit,
     });
   };
 
@@ -248,13 +306,15 @@ export default function App() {
   };
 
   const finishGame = (winner: 'citizens' | 'impostor', finalPlayers: Player[]) => {
-    updateScores(winner, finalPlayers);
-    setGameState(prev => ({
-        ...prev,
-        players: finalPlayers,
-        winner: winner,
-        phase: 'GAME_OVER'
-    }));
+    setGameState(prev => {
+        updateScores(winner, finalPlayers, prev.currentRound);
+        return {
+            ...prev,
+            players: finalPlayers,
+            winner: winner,
+            phase: 'GAME_OVER'
+        };
+    });
     localStorage.removeItem('impostor_game_state');
   };
 
@@ -282,18 +342,28 @@ export default function App() {
 
   const continueRound = () => {
     setFeedback(null);
-    setGameState(prev => ({ ...prev, phase: 'DEBATE' }));
+    setGameState(prev => {
+      const nextRound = prev.currentRound + 1;
+      // Si se alcanzó el límite de rondas, el impostor gana
+      if (prev.maxRounds !== null && nextRound > prev.maxRounds) {
+        finishGame('impostor', prev.players);
+        return prev;
+      }
+      return { ...prev, currentRound: nextRound, phase: 'DEBATE' };
+    });
   };
 
   const handleReplay = () => {
      const currentNames = gameState.players.map(p => p.name);
-     startGame(currentNames, gameState.impostorCount, gameState.undercoverCount, selectedThemeIds, gameState.gameMode);
+     startGame(currentNames, gameState.impostorCount, gameState.undercoverCount, selectedThemeIds, gameState.gameMode, gameState.maxRounds);
   };
 
   const handleResetToSetup = () => {
      setGameState(prev => ({ ...prev, phase: 'SETUP' }));
      setShowInGameSettings(false);
      localStorage.removeItem('impostor_game_state');
+     setImpostorHistory({});
+     localStorage.removeItem('impostor_history');
   };
 
   const handleFullReset = () => {
@@ -564,8 +634,8 @@ export default function App() {
         
         {gameState.phase === 'SETUP' && (
           <div className="p-4 flex-1 flex flex-col justify-center">
-            <SetupPhase 
-                onStartGame={startGame} 
+            <SetupPhase
+                onStartGame={(names, ic, uc, themes, mode, roundLimit) => startGame(names, ic, uc, themes, mode, roundLimit)}
                 scores={scores}
                 onResetScores={resetScores}
             />
@@ -586,6 +656,8 @@ export default function App() {
             timerDuration={timerDuration}
             onTimerEnd={() => setGameState(prev => ({ ...prev, phase: 'VOTING' }))}
             isLocalMode={true}
+            currentRound={gameState.currentRound}
+            maxRounds={gameState.maxRounds}
           />
         )}
 
@@ -604,13 +676,14 @@ export default function App() {
         )}
 
         {gameState.phase === 'GAME_OVER' && (
-          <ResultPhase 
+          <ResultPhase
             winner={gameState.winner!}
             players={gameState.players}
             secretWord={gameState.secretWord}
             scores={scores}
             onPlayAgain={handleReplay}
             onChangeSetup={handleResetToSetup}
+            currentRound={gameState.currentRound}
           />
         )}
       </div>

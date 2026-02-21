@@ -26,6 +26,7 @@ interface ResultPhaseProps {
   onPlayAgain: () => void;
   onChangeSetup: () => void;
   isHost?: boolean;
+  currentRound?: number;
 }
 
 export const ResultPhase: React.FC<ResultPhaseProps> = ({
@@ -35,7 +36,8 @@ export const ResultPhase: React.FC<ResultPhaseProps> = ({
   scores,
   onPlayAgain,
   onChangeSetup,
-  isHost = true
+  isHost = true,
+  currentRound = 1
 }) => {
   const isImpostorWin = winner === 'impostor';
   const impostors = players.filter(p => p.role === 'impostor');
@@ -44,12 +46,17 @@ export const ResultPhase: React.FC<ResultPhaseProps> = ({
   const phrases = VICTORY_PHRASES[winner];
   const victoryPhrase = phrases[Math.floor(Math.random() * phrases.length)];
   
-  const getPointsEarned = (role: string) => {
+  const getPointsEarned = (player: Player) => {
+    const roundsSurvived = currentRound;
     if (winner === 'citizens') {
-        return (role === 'citizen' || role === 'undercover') ? 100 : 0;
+        if (player.role === 'citizen') return 100;
+        if (player.role === 'undercover') return player.isDead ? 50 : 150;
+        if (player.role === 'impostor') return roundsSurvived * 25;
     } else {
-        return role === 'impostor' ? 200 : 0;
+        if (player.role === 'impostor') return 100 + (roundsSurvived * 50);
+        if (player.role === 'undercover') return player.isDead ? 0 : 25;
     }
+    return 0;
   };
 
   return (
@@ -78,7 +85,7 @@ export const ResultPhase: React.FC<ResultPhaseProps> = ({
             <p className="text-xs text-slate-500 uppercase font-bold mb-3">Roles & Puntos</p>
             <div className="flex flex-col gap-2 max-h-60 overflow-y-auto scrollbar-thin">
                 {players.map(p => {
-                    const points = getPointsEarned(p.role);
+                    const points = getPointsEarned(p);
                     const total = scores[p.name] || 0;
                     let badgeColor = 'bg-slate-700 text-slate-300';
                     let roleLabel = 'Ciudadano';

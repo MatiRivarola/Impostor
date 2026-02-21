@@ -5,7 +5,7 @@ import { THEMES, MIN_PLAYERS } from '../constants';
 import { ThemeOption, ScoreMap, GameMode } from '../types';
 
 interface SetupPhaseProps {
-  onStartGame: (names: string[], impostorCount: number, undercoverCount: number, selectedThemes: string[], mode: GameMode) => void;
+  onStartGame: (names: string[], impostorCount: number, undercoverCount: number, selectedThemes: string[], mode: GameMode, roundLimit: number | null) => void;
   scores: ScoreMap;
   onResetScores: () => void;
 }
@@ -17,6 +17,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
   const [undercoverCount, setUndercoverCount] = useState(0);
   const [selectedThemes, setSelectedThemes] = useState<string[]>([THEMES[0].id]);
   const [gameMode, setGameMode] = useState<GameMode>('chaos');
+  const [roundLimit, setRoundLimit] = useState<number | null>(null);
 
   // Pre-fill names from history if empty
   React.useEffect(() => {
@@ -66,7 +67,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
 
   const handleStart = () => {
     if (names.length < MIN_PLAYERS) return;
-    onStartGame(names, impostorCount, undercoverCount, selectedThemes, gameMode);
+    onStartGame(names, impostorCount, undercoverCount, selectedThemes, gameMode, roundLimit);
   };
 
   // Validation
@@ -253,6 +254,32 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
                     Sin Encubiertos
                 </div>
             )}
+        </div>
+      </div>
+
+      {/* Round Limit Selector */}
+      <div className="bg-slate-800/40 p-3 rounded-2xl border border-slate-700/50 mt-1">
+        <h2 className="font-bold text-sm text-slate-300 uppercase tracking-wide mb-3">Cantidad de Rondas</h2>
+        <div className="grid grid-cols-3 gap-2">
+          {([2, 3, null] as (number | null)[]).map((value) => {
+            const isSelected = roundLimit === value;
+            const label = value === null ? '∞' : `${value}`;
+            const desc = value === null ? 'Infinitas' : `${value} rondas`;
+            return (
+              <button
+                key={label}
+                onClick={() => setRoundLimit(value)}
+                className={`p-3 rounded-xl border-2 text-center transition-all ${
+                  isSelected
+                    ? 'bg-blue-900/20 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
+                    : 'bg-slate-900/80 border-slate-700 opacity-60 hover:opacity-100'
+                }`}
+              >
+                <span className={`text-2xl font-black block ${isSelected ? 'text-blue-400' : 'text-slate-400'}`}>{label}</span>
+                <span className={`text-[10px] font-bold uppercase ${isSelected ? 'text-blue-300' : 'text-slate-500'}`}>{desc}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

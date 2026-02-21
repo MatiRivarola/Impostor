@@ -12,7 +12,9 @@ interface DebatePhaseProps {
   roomCode?: string;
   serverTimeRemaining?: number;
   isHost?: boolean;
-  isLocalMode?: boolean; // Nueva prop para modo local
+  isLocalMode?: boolean;
+  currentRound?: number;
+  maxRounds?: number | null;
 }
 
 export const DebatePhase: React.FC<DebatePhaseProps> = ({
@@ -23,7 +25,9 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({
   roomCode,
   serverTimeRemaining,
   isHost = false,
-  isLocalMode = false
+  isLocalMode = false,
+  currentRound,
+  maxRounds
 }) => {
   // Usar tiempo del servidor si está disponible, sino usar el local
   const [timeLeft, setTimeLeft] = useState(serverTimeRemaining || timerDuration);
@@ -129,6 +133,13 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({
       <div className="text-center space-y-1 mb-4">
         <h1 className="text-3xl font-black text-white uppercase tracking-tight italic">¡A DISCUTIR!</h1>
         <p className="text-slate-400 text-sm">Sáquenle la ficha al que miente.</p>
+        {currentRound !== undefined && (
+          <div className="inline-flex items-center gap-1 bg-slate-800/80 px-3 py-1 rounded-full border border-slate-700 mt-2">
+            <span className="text-blue-400 text-xs font-black uppercase">
+              Ronda {currentRound}{maxRounds !== null && maxRounds !== undefined ? `/${maxRounds}` : ''}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Orden de turnos */}
