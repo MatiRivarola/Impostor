@@ -75,6 +75,44 @@
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
       }
+      /* Animaciones de juego */
+      @keyframes dramaticEnter {
+        0% { transform: scale(0) rotate(-5deg); opacity: 0; }
+        70% { transform: scale(1.1) rotate(2deg); opacity: 1; }
+        100% { transform: scale(1) rotate(0deg); }
+      }
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 50%, 90% { transform: translateX(-4px); }
+        30%, 70% { transform: translateX(4px); }
+      }
+      @keyframes roleReveal {
+        0% { transform: scaleY(0) rotateX(90deg); opacity: 0; }
+        100% { transform: scaleY(1) rotateX(0deg); opacity: 1; }
+      }
+      @keyframes spotlightPulse {
+        0%, 100% { opacity: 0.1; transform: scale(1); }
+        50% { opacity: 0.25; transform: scale(1.05); }
+      }
+      @keyframes confettiPiece {
+        0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+        100% { transform: translateY(-80px) rotate(720deg); opacity: 0; }
+      }
+      @keyframes bounceSlow {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+      }
+      @keyframes eventSlideIn {
+        0% { transform: translateY(30px) scale(0.9); opacity: 0; }
+        100% { transform: translateY(0) scale(1); opacity: 1; }
+      }
+      .animate-dramatic-enter { animation: dramaticEnter 0.8s ease-out; }
+      .animate-shake { animation: shake 0.6s ease-in-out; }
+      .animate-role-reveal { animation: roleReveal 0.5s ease-out; }
+      .animate-spotlight-pulse { animation: spotlightPulse 2s ease-in-out infinite; }
+      .animate-bounce-slow { animation: bounceSlow 2s ease-in-out infinite; }
+      .animate-event-slide-in { animation: eventSlideIn 0.6s ease-out; }
+
       /* Scrollbar personalziado */
       .scrollbar-thin::-webkit-scrollbar {
         width: 6px;

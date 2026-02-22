@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { RotateCcw, Settings, Trophy } from 'lucide-react';
 import { Button } from './Button';
 import { Player, ScoreMap } from '../types';
@@ -27,6 +27,7 @@ interface ResultPhaseProps {
   onChangeSetup: () => void;
   isHost?: boolean;
   currentRound?: number;
+  playSound?: (type: 'victory' | 'defeat') => void;
 }
 
 export const ResultPhase: React.FC<ResultPhaseProps> = ({
@@ -37,11 +38,16 @@ export const ResultPhase: React.FC<ResultPhaseProps> = ({
   onPlayAgain,
   onChangeSetup,
   isHost = true,
-  currentRound = 1
+  currentRound = 1,
+  playSound,
 }) => {
   const isImpostorWin = winner === 'impostor';
   const impostors = players.filter(p => p.role === 'impostor');
   const undercovers = players.filter(p => p.role === 'undercover');
+
+  useEffect(() => {
+    playSound?.(isImpostorWin ? 'defeat' : 'victory');
+  }, []);
 
   const phrases = VICTORY_PHRASES[winner];
   const victoryPhrase = phrases[Math.floor(Math.random() * phrases.length)];

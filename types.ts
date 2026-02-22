@@ -12,10 +12,20 @@ export type GamePhase =
   | 'ASSIGNMENT_REVEAL' // Showing the role
   | 'DEBATE'
   | 'VOTING'
+  | 'VOTING_PASS' // Local: "Pasá el fono a X" para votar en secreto
+  | 'VOTING_REVEAL' // Local: Revelación dramática de votos
   | 'LAST_BULLET' // Hardcore mode only: Impostor guesses word
   | 'GAME_OVER';
 
 export type OnlinePhase = 'LOBBY' | 'ASSIGNMENT' | 'DEBATE' | 'VOTING' | 'ELIMINATION' | 'RESULT';
+
+export interface GameEvent {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  effect: 'half_timer' | 'no_timer' | 'silent' | 'one_word' | 'confessional' | 'none';
+}
 
 export interface EliminationData {
   victimId: string;
@@ -54,6 +64,11 @@ export interface GameState {
   startingPlayer?: string; // Nombre del jugador que arranca
   currentRound: number; // Ronda actual (empieza en 1)
   maxRounds: number | null; // Límite de rondas (null = infinitas)
+  votes: Record<string, string>; // voterId → victimId
+  votingPlayerIndex: number;
+  activeEvent: GameEvent | null;
+  timerOverride: number | null;
+  useSecretVoting: boolean;
 }
 
 export interface ThemeOption {

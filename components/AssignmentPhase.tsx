@@ -6,13 +6,15 @@ import { Player } from '../types';
 interface AssignmentPhaseProps {
   player: Player;
   onNext: () => void;
-  revealMode?: 'pass-and-play' | 'single-player'; // Default: pass-and-play
+  revealMode?: 'pass-and-play' | 'single-player';
+  playSound?: (type: 'card_flip' | 'reveal_impostor' | 'reveal_citizen') => void;
 }
 
 export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
   player,
   onNext,
-  revealMode = 'pass-and-play'
+  revealMode = 'pass-and-play',
+  playSound,
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const isImpostor = player.role === 'impostor';
@@ -24,8 +26,13 @@ export const AssignmentPhase: React.FC<AssignmentPhaseProps> = ({
   const isSinglePlayer = revealMode === 'single-player';
 
   const handleReveal = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Stop click from bubbling anywhere else
+    e.stopPropagation();
+    playSound?.('card_flip');
     setIsFlipped(true);
+    setTimeout(() => {
+      // Usamos el mismo tono para todos para no dar pistas auditivas
+      playSound?.('reveal_citizen');
+    }, 400);
   };
 
   const handleNext = (e: React.MouseEvent) => {

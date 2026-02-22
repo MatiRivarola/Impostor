@@ -5,19 +5,69 @@ import { THEMES, MIN_PLAYERS } from '../constants';
 import { ThemeOption, ScoreMap, GameMode } from '../types';
 
 interface SetupPhaseProps {
-  onStartGame: (names: string[], impostorCount: number, undercoverCount: number, selectedThemes: string[], mode: GameMode, roundLimit: number | null) => void;
+  onStartGame: (names: string[], impostorCount: number, undercoverCount: number, selectedThemes: string[], mode: GameMode, roundLimit: number | null, useSecretVoting: boolean) => void;
   scores: ScoreMap;
   onResetScores: () => void;
+  soundEnabled?: boolean;
+  vibrationEnabled?: boolean;
+  onToggleSound?: () => void;
+  onToggleVibration?: () => void;
 }
 
-export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onResetScores }) => {
+export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onResetScores, soundEnabled, vibrationEnabled, onToggleSound, onToggleVibration }) => {
   const [names, setNames] = useState<string[]>([]);
   const [currentName, setCurrentName] = useState('');
-  const [impostorCount, setImpostorCount] = useState(1);
+  // Persistent Settings Initialization
+  const [impostorCount, setImpostorCount] = useState(() => {
+    const saved = localStorage.getItem('impostor_setup_impostorCount');
+    return saved ? parseInt(saved) : 1;
+  });
   const [undercoverCount, setUndercoverCount] = useState(0);
-  const [selectedThemes, setSelectedThemes] = useState<string[]>([THEMES[0].id]);
-  const [gameMode, setGameMode] = useState<GameMode>('chaos');
-  const [roundLimit, setRoundLimit] = useState<number | null>(null);
+  const [selectedThemes, setSelectedThemes] = useState<string[]>(() => {
+    const saved = localStorage.getItem('impostor_setup_selectedThemes');
+    return saved ? JSON.parse(saved) : [THEMES[0].id];
+  });
+  const [gameMode, setGameMode] = useState<GameMode>(() => {
+    const saved = localStorage.getItem('impostor_setup_gameMode');
+    return (saved as GameMode) || 'chaos';
+  });
+  const [roundLimit, setRoundLimit] = useState<number | null>(() => {
+    const saved = localStorage.getItem('impostor_setup_roundLimit');
+    return saved ? (saved === 'null' ? null : parseInt(saved)) : null;
+  });
+  const [useGameModes, setUseGameModes] = useState(() => {
+    const saved = localStorage.getItem('impostor_setup_useGameModes');
+    return saved === null ? true : saved === 'true';
+  });
+  const [useSecretVoting, setUseSecretVoting] = useState(() => {
+    const saved = localStorage.getItem('impostor_setup_useSecretVoting');
+    return saved === null ? true : saved === 'true';
+  });
+
+  // Persistence Sync
+  React.useEffect(() => {
+    localStorage.setItem('impostor_setup_impostorCount', impostorCount.toString());
+  }, [impostorCount]);
+
+  React.useEffect(() => {
+    localStorage.setItem('impostor_setup_gameMode', gameMode);
+  }, [gameMode]);
+
+  React.useEffect(() => {
+    localStorage.setItem('impostor_setup_roundLimit', String(roundLimit));
+  }, [roundLimit]);
+
+  React.useEffect(() => {
+    localStorage.setItem('impostor_setup_useGameModes', useGameModes.toString());
+  }, [useGameModes]);
+
+  React.useEffect(() => {
+    localStorage.setItem('impostor_setup_useSecretVoting', useSecretVoting.toString());
+  }, [useSecretVoting]);
+
+  React.useEffect(() => {
+    localStorage.setItem('impostor_setup_selectedThemes', JSON.stringify(selectedThemes));
+  }, [selectedThemes]);
 
   // Pre-fill names from history if empty
   React.useEffect(() => {
@@ -67,7 +117,9 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
 
   const handleStart = () => {
     if (names.length < MIN_PLAYERS) return;
-    onStartGame(names, impostorCount, undercoverCount, selectedThemes, gameMode, roundLimit);
+    const finalMode = useGameModes ? gameMode : 'classic';
+    const finalUndercoverCount = useGameModes ? undercoverCount : 0;
+    onStartGame(names, impostorCount, finalUndercoverCount, selectedThemes, finalMode, roundLimit, useSecretVoting);
   };
 
   // Validation
@@ -145,8 +197,42 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
         </div>
       </div>
 
-      {/* Game Modes */}
-      <div className="space-y-3">
+      {/* Master Toggles: Game Modes & Secret Voting */}
+      <div className="bg-slate-800/40 p-3 rounded-2xl border border-slate-700/50 mt-1">
+        <h2 className="font-bold text-sm text-slate-300 uppercase tracking-wide mb-3">Opciones Avanzadas</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setUseGameModes(!useGameModes)}
+            className={`p-3 rounded-xl border-2 text-center transition-all ${
+                useGameModes
+                ? 'bg-purple-900/20 border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.2)]'
+                : 'bg-slate-900/80 border-slate-700 opacity-60'
+            }`}
+          >
+            <span className="text-2xl block mb-1">{useGameModes ? '🎮' : '🕹️'}</span>
+            <span className={`text-[10px] font-bold uppercase ${useGameModes ? 'text-purple-300' : 'text-slate-500'}`}>
+              Modos: {useGameModes ? 'ON' : 'OFF'}
+            </span>
+          </button>
+          <button
+            onClick={() => setUseSecretVoting(!useSecretVoting)}
+            className={`p-3 rounded-xl border-2 text-center transition-all ${
+                useSecretVoting
+                ? 'bg-blue-900/20 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
+                : 'bg-slate-900/80 border-slate-700 opacity-60'
+            }`}
+          >
+            <span className="text-2xl block mb-1">{useSecretVoting ? '🗳️' : '📢'}</span>
+            <span className={`text-[10px] font-bold uppercase ${useSecretVoting ? 'text-blue-300' : 'text-slate-500'}`}>
+              Voto Secreto: {useSecretVoting ? 'ON' : 'OFF'}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Game Modes (Conditional) */}
+      {useGameModes && (
+        <div className="space-y-3 animate-fade-in">
          <h2 className="font-bold text-sm text-purple-400 uppercase tracking-wide px-1">Modo de Juego</h2>
          <div className="flex flex-col gap-3">
             
@@ -200,6 +286,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
             </button>
          </div>
       </div>
+      )}
 
       {/* Role Configuration (Dynamic) */}
       <div className="bg-slate-800/40 p-3 rounded-2xl border border-slate-700/50 mt-1">
@@ -228,7 +315,7 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
             </div>
 
             {/* Undercover Selector (Conditional) */}
-            {showUndercoverSelector ? (
+            {showUndercoverSelector && useGameModes ? (
                 <div className="flex flex-col gap-1 animate-fade-in">
                     <span className="text-[10px] font-bold text-yellow-400 uppercase">Encubiertos</span>
                     <div className="flex items-center justify-between bg-slate-900/80 rounded-lg p-1 border border-slate-700">
@@ -282,6 +369,41 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onStartGame, scores, onR
           })}
         </div>
       </div>
+
+      {/* Sound & Vibration Toggles */}
+      {onToggleSound && onToggleVibration && (
+        <div className="bg-slate-800/40 p-3 rounded-2xl border border-slate-700/50 mt-1">
+          <h2 className="font-bold text-sm text-slate-300 uppercase tracking-wide mb-3">Sonido y Vibración</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={onToggleSound}
+              className={`p-3 rounded-xl border-2 text-center transition-all ${
+                soundEnabled
+                  ? 'bg-blue-900/20 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
+                  : 'bg-slate-900/80 border-slate-700 opacity-60'
+              }`}
+            >
+              <span className="text-2xl block mb-1">{soundEnabled ? '🔊' : '🔇'}</span>
+              <span className={`text-[10px] font-bold uppercase ${soundEnabled ? 'text-blue-300' : 'text-slate-500'}`}>
+                Sonido {soundEnabled ? 'ON' : 'OFF'}
+              </span>
+            </button>
+            <button
+              onClick={onToggleVibration}
+              className={`p-3 rounded-xl border-2 text-center transition-all ${
+                vibrationEnabled
+                  ? 'bg-blue-900/20 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
+                  : 'bg-slate-900/80 border-slate-700 opacity-60'
+              }`}
+            >
+              <span className="text-2xl block mb-1">{vibrationEnabled ? '📳' : '📴'}</span>
+              <span className={`text-[10px] font-bold uppercase ${vibrationEnabled ? 'text-blue-300' : 'text-slate-500'}`}>
+                Vibración {vibrationEnabled ? 'ON' : 'OFF'}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Themes Grid */}
       <div className="flex flex-col flex-1 min-h-0 mt-2">

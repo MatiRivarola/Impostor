@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AlertTriangle, FastForward, PlusCircle, ArrowRight } from 'lucide-react';
 import { Button } from './Button';
-import { Player } from '../types';
+import { Player, GameEvent } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 
 interface DebatePhaseProps {
@@ -15,6 +15,8 @@ interface DebatePhaseProps {
   isLocalMode?: boolean;
   currentRound?: number;
   maxRounds?: number | null;
+  activeEvent?: GameEvent | null;
+  playSound?: (type: 'timer_tick' | 'timer_end') => void;
 }
 
 export const DebatePhase: React.FC<DebatePhaseProps> = ({
@@ -27,7 +29,9 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({
   isHost = false,
   isLocalMode = false,
   currentRound,
-  maxRounds
+  maxRounds,
+  activeEvent,
+  playSound,
 }) => {
   // Usar tiempo del servidor si está disponible, sino usar el local
   const [timeLeft, setTimeLeft] = useState(serverTimeRemaining || timerDuration);
@@ -86,9 +90,23 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({
     }
   }, []);
 
+  // Sound effects for timer
+  const timerEndPlayedRef = useRef(false);
+
+  useEffect(() => {
+    if (!playSound) return;
+    if (timeLeft > 0 && timeLeft <= 10 && isActive) {
+      playSound('timer_tick');
+    }
+    if (timeLeft === 0 && !timerEndPlayedRef.current) {
+      timerEndPlayedRef.current = true;
+      playSound('timer_end');
+    }
+  }, [timeLeft, isActive, playSound]);
+
   // Timer local de fallback (solo si no hay socket)
   useEffect(() => {
-    if (socket) return; // Si hay socket, usar timer del servidor
+    if (socket) return;
 
     let interval: ReturnType<typeof setInterval>;
     if (isActive && timeLeft > 0) {
@@ -97,7 +115,6 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({
       }, 1000);
     } else if (timeLeft === 0) {
       setIsActive(false);
-      // Send notification
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification("¡Tiempo cumplido!", {
             body: "El debate ha terminado. Es hora de votar.",
@@ -141,6 +158,19 @@ export const DebatePhase: React.FC<DebatePhaseProps> = ({
           </div>
         )}
       </div>
+
+      {/* Banner de evento activo */}
+      {activeEvent && (
+        <div className="w-full bg-purple-900/30 p-4 rounded-2xl border-2 border-purple-500/50 mb-4 backdrop-blur-sm animate-event-slide-in">
+          <div className="flex items-center gap-3 justify-center">
+            <span className="text-3xl">{activeEvent.emoji}</span>
+            <div className="text-left">
+              <h3 className="font-black text-purple-300 uppercase text-sm">{activeEvent.name}</h3>
+              <p className="text-purple-200/70 text-xs">{activeEvent.description}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Orden de turnos */}
       {speakingOrder.length > 0 && (
